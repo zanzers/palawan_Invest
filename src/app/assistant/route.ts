@@ -1,9 +1,9 @@
+import { SYSTEM_PROMPT } from "@/api/assistant/prompt";
+import { bodySchema } from "@/api/schema/assistant_schema";
+import { AllProvidersFailedError } from "@/lib/client_lib/client_lib";
+import { createChatCompletion } from "@/lib/openai/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { bodySchema } from "../schema/assistant_schema";
-import { createChatCompletion } from "@/lib/openai/client";
-import { SYSTEM_PROMPT } from "./prompt";
-import { AllProvidersFailedError } from "@/lib/client_lib/client_lib";
 
 
 export async function POST(request: Request){
