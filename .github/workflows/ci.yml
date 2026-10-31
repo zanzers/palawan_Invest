@@ -17,8 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
-    # Dummy values so the build can run without real secrets.
-    # Never put real keys here; CI doesn't need them yet.
     env:
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy-anon-key
@@ -40,6 +38,9 @@ jobs:
 
       - name: Lint
         run: npm run lint --if-present
+      
+      - name: Generate Next.js types
+        run: npm next typegen
 
       - name: Type check
         run: npx tsc --noEmit
