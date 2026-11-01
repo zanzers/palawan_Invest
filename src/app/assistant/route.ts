@@ -1,11 +1,11 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { runTool } from "@/lib/ai/AI_runTool";
 import { SYSTEM_PROMPT } from "@/api/assistant/prompt";
 import { bodySchema } from "@/api/schema/assistant_schema";
-import { searchListingsDefinition } from "@/lib/ai/tools/search-listing";
+
 import { AllProvidersFailedError } from "@/lib/client_lib/client_lib";
 import { createChatCompletion } from "@/lib/openai/client";
+import { executeTool, getToolDefinitions } from "@/lib/ai/registry";
 
 
 
@@ -16,7 +16,6 @@ export async function POST(request: Request){
     if(!parsed.success){
         return NextResponse.json({  error: "Invalid request body",},{ status: 400 });
     }
-
 
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
         { role: SYSTEM_PROMPT.system_role, content: SYSTEM_PROMPT.search_listings_tool },
@@ -29,7 +28,7 @@ export async function POST(request: Request){
         for(let step = 0; step < MAX_STEPS; step++){
             const { completion, model} = await createChatCompletion({
                 messages,
-                tools: [searchListingsDefinition],
+                tools: getToolDefinitions(),
             });
 
             const assistantMessage = completion.choices[0]?.message;
@@ -52,7 +51,7 @@ export async function POST(request: Request){
                 console.log(`[tool] $[call.function.name]`, call.function.arguments);
 
                 toolsUsed.push(call.function.name);
-                const result = runTool(call.function.name, call.function.arguments);
+                const result = await executeTool(call.function.name, call.function.arguments);
 
                 messages.push({
                     role: "tool",
