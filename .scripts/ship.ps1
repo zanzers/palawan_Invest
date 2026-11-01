@@ -3,6 +3,28 @@ param(
     [string]$Message
 )
 
+
+function Invoke-Check {
+    param(
+        [string]$Name,
+        [scriptblock]$Command
+    )
+
+    Write-Host "`nRunning $Name..." -ForegroundColor Cyan
+    & $Command
+
+    if($LASTEXITCODE -ne 0){
+        Write-Host "`n$Name failed. Fix the issues above, then run ship again." -ForegroundColor Red
+        Write-Host "Nothing was committed or pushed." -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Host "$Name passed." -ForegroundColor Green
+}
+
+
+
+
+
 $ErrorActionPreference = "Stop"
 
 # --------------------------------------------------
@@ -24,6 +46,17 @@ if (-not $status) {
     Write-Host "No changes to ship." -ForegroundColor Yellow
     exit 1
 }
+
+if((npm pk get scripts.lint) -eq "{}"){
+    Write-Host "No lint script found in package.json. Add one before shipping." -ForegroundColor Red
+    exit 1
+}
+
+Invoke-Check "Next.js type generation" { npx next typegen }
+Invoke-Check "Type check"              { npx tsc --noEmit }
+Invoke-Check "Lint (0 warnings allowed)" { npm run lint -- --max-warnings=0 }
+
+
 
 # --------------------------------------------------
 # Step 2: Update main

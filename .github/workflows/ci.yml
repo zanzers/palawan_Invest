@@ -37,7 +37,7 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint --if-present
+        run: npm run lint -- --max-warnings=0
       
       - name: Generate Next.js types
         run: npx next typegen
