@@ -1,4 +1,6 @@
+[![CI](https://github.com/zanzers/palawan_Invest/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zanzers/palawan_Invest/actions/workflows/ci.yml)
 # AI Tool Calling Foundation
+
 
 **Version:** 1.2
 **Architecture:** Next.js + TypeScript + Supabase + OpenAI
