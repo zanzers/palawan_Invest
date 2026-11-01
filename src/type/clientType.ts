@@ -1,3 +1,7 @@
+export type AssistantReply ={
+    reply: string;
+    model: string;
+}
 
 export type LLMTargets = {
     name: string;
