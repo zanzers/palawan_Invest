@@ -1,7 +1,7 @@
 import z from "zod";
 import { defineTool } from "../tool-types";
 import { GETLISTINGS_PROMPT } from "@/api/assistant/prompt";
-import { LISTINGS } from "@/services/listing/fake-data";
+import { getListingByCode } from "@/services/listing/listings";
 
 
 export const getListingsTool = defineTool({
@@ -10,16 +10,18 @@ export const getListingsTool = defineTool({
       parameters: {
         type: "object",
         properties: {
-           id: {type: "string", description: "listing id, e.g L-003"},
+           id: {type: "string", description: "listing code, e.g L-003"},
         },
-        required: ["id"],
+        required: ["code"],
         additionalProperties: false,
       },
-      schema: z.object({ id: z.string().min(1)}),
+      schema: z.object({ code: z.string().min(1)}),
 
-      handler: ({id}) => {
-        const result = LISTINGS.find((l) => l.id.toLowerCase() === id.toLocaleLowerCase());
-        return result ?? { error: `No listing found with id ${id}`};
+      handler: async ({ code }) => {
+        const listing = await getListingByCode(code);
+        return listing ?? {
+          error: `No listing found with  code ${code}`
+        }
       },
   });
 

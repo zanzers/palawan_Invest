@@ -38,10 +38,12 @@ export async function executeTool(name: string, rawArgs: string): Promise<unknow
     const args = tryParse(rawArgs);
     if(!args.ok) return { error: args.error };
 
+  
     try{
         return await tool.execute(args.data)
-    } catch{
-        return { error: "Arguments were not valid JSON"};
+    } catch (err){
+        console.log(`[tool] ${name} threw`, err );
+        return { error: "Tool execution failed"};
     }
 } 
 

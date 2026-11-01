@@ -1,8 +1,10 @@
 import z from "zod";
 import {PROPERTY_TYPES} from "@/type/db_types";
 import {defineTool} from "@/lib/ai/tool-types";
-import { LISTINGS } from "@/services/listing/fake-data";
 import { SEARCHLISTINGS_PROMPT } from "@/api/assistant/prompt";
+import { searchListing } from "@/services/listing/listings";
+
+
 
 export const searchListingsTool = defineTool({
   name: SEARCHLISTINGS_PROMPT.name,
@@ -21,16 +23,9 @@ export const searchListingsTool = defineTool({
         property_type: z.enum([...PROPERTY_TYPES]).optional(),
         max_price: z.number().optional(),
       }),
-      handler: ({location, property_type, max_price}) => {
-        const result = LISTINGS.filter(
-          (l) =>
-        (!location || l.location.toLowerCase().includes(location.toLowerCase())) &&
-        (!property_type || l.property_type === property_type) &&
-        (max_price === undefined || l.price <= max_price),
-        ).slice(0, 5);
-
-        return { count: result.length, listings: result };
-        
+      handler: async ({ location, property_type, max_price }) => {
+        const listings = await searchListing({location, property_type, max_price});
+        return { count: listings.length, listings: listings.slice(0, 5) };   
       },
   });
 
