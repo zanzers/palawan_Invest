@@ -19,6 +19,11 @@ export async function createChatCompletion( params: Omit<OpenAI.Chat.ChatComplet
                 ...params,
                 model: target.model,
             });
+
+            if(!completion.choices?.length){
+                const providerError = (completion as unknown as {error?: { message?: string }}).error?.message;
+                throw new Error(providerError ?? "No completion returned");
+            }
             return { completion, target: target.name, model: target.model};
         } catch(err){
             const message = describeError(err);

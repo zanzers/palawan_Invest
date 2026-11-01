@@ -48,10 +48,12 @@ export async function POST(request: Request){
             for (const call of assistantMessage.tool_calls) {
                 if(call.type !== "function") continue;
 
-                console.log(`[tool] $[call.function.name]`, call.function.arguments);
+                console.log(`[tool] ${call.function.name}`, call.function.arguments);
 
                 toolsUsed.push(call.function.name);
+                
                 const result = await executeTool(call.function.name, call.function.arguments);
+                console.log("[tool result]", JSON.stringify(result).slice(0, 300));
 
                 messages.push({
                     role: "tool",
