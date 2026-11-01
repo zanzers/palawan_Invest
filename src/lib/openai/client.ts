@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import {loadTargets, getClient, describeError, AllProvidersFailedError } from "@/lib/client_lib/client_lib";
-import { LLMFailures, LLMTargets } from "@/type/clientType";
+import { LLMFailures} from "@/type/clientType";
 
 
 
