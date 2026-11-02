@@ -1,3 +1,4 @@
+import { cleanLocation } from "@/api/schema/assistant_schema";
 import { toListing, withValue } from "@/lib/services/listingFunctions";
 import { getSupabase } from "@/lib/supabase/server";
 import { listingRow, listingType } from "@/type/listingType";
@@ -22,8 +23,8 @@ export async function searchListing( filters: { location?: string; property_type
         .limit(5);
         
 
-    query = withValue(query, filters.location, (q, v) => q.ilike("location", `%${v}%`));
-    query = withValue(query, filters.property_type, (q, v) => q.eq("property_details.unit_type", v));
+    query = withValue(query, filters.location && cleanLocation(filters.location), (q, v) => q.ilike("location", `%${v}%`));
+    query = withValue(query, filters.property_type, (q, v) => q.ilike("property_details.unit_type", v));
     query = withValue(query, filters.max_price, (q, v) => q.lte("property_details.price", v));
 
     const { data, error } = await query;

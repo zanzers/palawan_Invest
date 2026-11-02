@@ -1,6 +1,7 @@
 type AssistantReply ={
     reply: string;
     model: string;
+    conversation_id: string;
 }
 
 type LLMTargets = {
@@ -26,4 +27,23 @@ type DirectListing = {
 };
 
 
-export type {AssistantReply, LLMFailures, LLMTargets,DirectListing }
+type HistoryMessage = {
+    role: "user" | "assistant";
+    content: string;
+};
+
+type ToolRuns = {
+    tool_name: string;
+    arguments: unknown;
+    status: "success" | "error";
+    result: unknown;
+};
+
+export type {
+    AssistantReply, 
+    LLMFailures, 
+    LLMTargets, 
+    DirectListing, 
+    ToolRuns, 
+    HistoryMessage 
+}
