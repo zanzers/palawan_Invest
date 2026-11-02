@@ -1,17 +1,29 @@
-export type AssistantReply ={
+type AssistantReply ={
     reply: string;
     model: string;
 }
 
-export type LLMTargets = {
+type LLMTargets = {
     name: string;
     baseURL: string;
     apikey: string;
     model: string;
 }
 
-export type LLMFailures = {
+type LLMFailures = {
     target: string;
     model: string;
     message: string;
 }
+
+
+type DirectListing = {
+  code: string;
+  title: string;
+  location: string;
+  developer: string | null;
+  units: { unit_type: string; price: number }[];
+};
+
+
+export type {AssistantReply, LLMFailures, LLMTargets,DirectListing }

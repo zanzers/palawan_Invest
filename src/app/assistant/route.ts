@@ -21,6 +21,8 @@ export async function POST(request: Request){
         { role: SYSTEM_PROMPT.system_role, content: SYSTEM_PROMPT.search_listings_tool },
         { role: SYSTEM_PROMPT.user_role, content: parsed.data.message}
     ];
+
+    const seenCalls = new Set<string>();
     const toolsUsed: string[] = [];
 
 
@@ -51,9 +53,13 @@ export async function POST(request: Request){
                 console.log(`[tool] ${call.function.name}`, call.function.arguments);
 
                 toolsUsed.push(call.function.name);
-                
-                const result = await executeTool(call.function.name, call.function.arguments);
-                console.log("[tool result]", JSON.stringify(result).slice(0, 300));
+                const key = `${call.function.name}:${call.function.arguments}`;
+                const result = seenCalls.has(key)
+                    ? { error: "You already made this exact call. Use the earlier result to answer the user."}
+                    : await executeTool(call.function.name, call.function.arguments); 
+                seenCalls.add(key);
+
+                console.log("[Tool result]", JSON.stringify(result).slice(0, 300));
 
                 messages.push({
                     role: "tool",
