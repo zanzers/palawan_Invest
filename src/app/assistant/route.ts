@@ -6,9 +6,10 @@ import { bodySchema } from "@/api/schema/assistant_schema";
 import { AllProvidersFailedError } from "@/lib/client_lib/client_lib";
 import { createChatCompletion } from "@/lib/openai/client";
 import { executeTool, getToolDefinitions } from "@/lib/ai/registry";
-import { getUserSupabase } from "@/lib/supabase/user";
 import { HistoryMessage, ToolRuns } from "@/type/clientType";
 import { createConversation, loadHistory, saveTurn } from "@/services/conversation/conversations";
+import { authenticate } from "@/lib/auth/authenticate";
+import { consumeRequest } from "@/services/usage/usage";
 
 
 const MAX_STEPS = 4;
@@ -17,12 +18,12 @@ export async function POST(request: Request){
     const parsed = bodySchema.safeParse(await request.json().catch(() => null));
     if(!parsed.success) return NextResponse.json({  error: "Invalid request body",},{ status: 400 });
 
-    const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-    if(!token) return NextResponse.json( { error: "Not signed in"}, { status: 401 });
+    const auth = await authenticate(request);
+    if("response" in auth) return auth.response;
+    const { db } = auth;
 
-    const db = getUserSupabase(token);
-    const { error: authError} = await db.auth.getUser(token);
-    if (authError) return NextResponse.json({ error: "Invalid session"}, {status: 401});
+    const limited = await consumeRequest(db);
+    if(limited) return limited;
     
 
     const seenCalls = new Set<string>();

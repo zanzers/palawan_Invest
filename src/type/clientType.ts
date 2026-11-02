@@ -39,11 +39,18 @@ type ToolRuns = {
     result: unknown;
 };
 
+type Rejection = { status: number; error: string };
+
+
+
+
+
 export type {
     AssistantReply, 
     LLMFailures, 
     LLMTargets, 
     DirectListing, 
     ToolRuns, 
-    HistoryMessage 
+    HistoryMessage,
+    Rejection
 }
