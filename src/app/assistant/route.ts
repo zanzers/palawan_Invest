@@ -6,27 +6,52 @@ import { bodySchema } from "@/api/schema/assistant_schema";
 import { AllProvidersFailedError } from "@/lib/client_lib/client_lib";
 import { createChatCompletion } from "@/lib/openai/client";
 import { executeTool, getToolDefinitions } from "@/lib/ai/registry";
-
+import { getUserSupabase } from "@/lib/supabase/user";
+import { HistoryMessage, ToolRuns } from "@/type/clientType";
+import { createConversation, loadHistory, saveTurn } from "@/services/conversation/conversations";
 
 
 const MAX_STEPS = 4;
 
 export async function POST(request: Request){
     const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-    if(!parsed.success){
-        return NextResponse.json({  error: "Invalid request body",},{ status: 400 });
-    }
+    if(!parsed.success) return NextResponse.json({  error: "Invalid request body",},{ status: 400 });
 
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: SYSTEM_PROMPT.system_role, content: SYSTEM_PROMPT.search_listings_tool },
-        { role: SYSTEM_PROMPT.user_role, content: parsed.data.message}
-    ];
+    const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    if(!token) return NextResponse.json( { error: "Not signed in"}, { status: 401 });
+
+    const db = getUserSupabase(token);
+    const { error: authError} = await db.auth.getUser(token);
+    if (authError) return NextResponse.json({ error: "Invalid session"}, {status: 401});
+    
 
     const seenCalls = new Set<string>();
     const toolsUsed: string[] = [];
+    const toolRuns: ToolRuns[] = [];
 
 
     try{
+        let conversationId: string | null = parsed.data.conversation_id ?? null;
+        let history: HistoryMessage[] = [];
+
+        if(conversationId){
+            const loaded = await loadHistory(db, conversationId);
+            
+            if (!loaded) {
+                return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+            }
+            history = loaded;
+        }
+
+         const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+            { role: SYSTEM_PROMPT.system_role, content: SYSTEM_PROMPT.search_listings_tool },
+            ...history.map(
+                (m) => ({ role: m.role, content: m.content}) as OpenAI.Chat.ChatCompletionMessageParam,
+            ),
+            { role: SYSTEM_PROMPT.user_role, content: parsed.data.message}
+        ];
+
+
         for(let step = 0; step < MAX_STEPS; step++){
             const { completion, model} = await createChatCompletion({
                 messages,
@@ -38,10 +63,25 @@ export async function POST(request: Request){
 
             
             if(!assistantMessage.tool_calls?.length){
+                const replyText = assistantMessage.content ?? "";
+
+                try {
+                    conversationId ??= await createConversation(db, parsed.data.message);
+                    await saveTurn(db, {
+                        conversationId,
+                        userText: parsed.data.message,
+                        assistantText: replyText,
+                        toolRuns,
+                    });
+                } catch (saveError) {
+                    console.error("Failed to save conversation:", saveError);
+                }
+
                 return NextResponse.json({
-                    reply: assistantMessage?.content ?? "",
+                    reply: replyText,
                     model,
                     toolsUsed,
+                    conversation_id: conversationId, 
                     usage: completion.usage,
                 });
             }
@@ -54,12 +94,27 @@ export async function POST(request: Request){
 
                 toolsUsed.push(call.function.name);
                 const key = `${call.function.name}:${call.function.arguments}`;
-                const result = seenCalls.has(key)
+                const isRepeat = seenCalls.has(key);
+                const result = isRepeat
                     ? { error: "You already made this exact call. Use the earlier result to answer the user."}
                     : await executeTool(call.function.name, call.function.arguments); 
                 seenCalls.add(key);
 
                 console.log("[Tool result]", JSON.stringify(result).slice(0, 300));
+                if(!isRepeat){
+                    let parsedArgs: unknown = call.function.arguments;
+                    try {parsedArgs = JSON.parse(call.function.arguments || "{}")} catch {};
+
+                    toolRuns.push({
+                        tool_name: call.function.name,
+                        arguments: parsedArgs,
+                        status: typeof result === "object" && result !== null && "error" in result ? "error" : "success",
+                        result,
+                    });
+                    
+                }
+
+
 
                 messages.push({
                     role: "tool",

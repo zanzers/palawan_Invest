@@ -1,19 +1,22 @@
 "use client";
 
+
+import { getAccessToken } from "@/lib/supabase/browser";
 import { AssistantReply, DirectListing } from "@/type/clientType";
 import { useState } from "react";
 
+type Turn = { role: "user" | "assistant"; text: string; model?: string };
 
-const UNAVAIL_STATE = [429, 502, 503];
+const UNAVAILABLE_STATUSES = [429, 502, 503];
 
-
-export default function Home(){
+export default function Home() {
   const [message, setMessage] = useState("");
-  const [result, setResult] = useState<AssistantReply | null>(null);
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-
+  // fallback state
   const [unavailable, setUnavailable] = useState(false);
   const [location, setLocation] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -25,51 +28,80 @@ export default function Home(){
 
     setLoading(true);
     setError(null);
-    setResult(null);
 
     try {
+      const token = await getAccessToken();
+
       const res = await fetch("/assistant", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text }),
-        });
-        const data = await res.json();
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          message: text,
+          conversation_id: conversationId ?? undefined,
+        }),
+      });
+      const data = (await res.json()) as AssistantReply & { error?: string };
 
-        if (!res.ok) {
-          if(UNAVAIL_STATE.includes(res.status)) setUnavailable(true);
-          throw new Error(data.error ?? "Request failed");
-        }
-
-        setUnavailable(false);
-        setResult(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      } finally {
-        setLoading(false);
+      if (!res.ok) {
+        if (UNAVAILABLE_STATUSES.includes(res.status)) setUnavailable(true);
+        throw new Error(data.error ?? "Request failed");
       }
+
+      setUnavailable(false);
+      setConversationId(data.conversation_id);
+      setTurns((t) => [
+        ...t,
+        { role: "user", text },
+        { role: "assistant", text: data.reply, model: data.model },
+      ]);
+      setMessage(""); // cleared only after success, so a failed request keeps your text
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function directSearch(){
+  async function directSearch() {
     setError(null);
 
     const params = new URLSearchParams();
     if (location.trim()) params.set("location", location.trim());
-    if (maxPrice) params.set("max_price", maxPrice);
+    const cleanPrice = maxPrice.replace(/[^\d.]/g, "");
+    if (cleanPrice) params.set("max_price", cleanPrice);
 
     try {
       const res = await fetch(`/listings?${params}`);
+      if (!res.ok) throw new Error(`Search failed (${res.status})`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Search failed");
       setDirect(data.listings);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     }
-
   }
 
-   return (
+  function newChat() {
+    setTurns([]);
+    setConversationId(null);
+    setError(null);
+    setUnavailable(false);
+    setDirect(null);
+  }
+
+  return (
     <main style={{ maxWidth: 640, margin: "40px auto", padding: 16 }}>
       <h1>Real Estate Assistant</h1>
+
+      {turns.map((t, i) => (
+        <div key={i} style={{ marginTop: 12 }}>
+          <strong>{t.role === "user" ? "You" : "Assistant"}:</strong>
+          <p style={{ whiteSpace: "pre-wrap" }}>{t.text}</p>
+          {t.model && <small>Answered by {t.model}</small>}
+        </div>
+      ))}
 
       <textarea
         value={message}
@@ -82,15 +114,11 @@ export default function Home(){
       <button onClick={send} disabled={loading || !message.trim()}>
         {loading ? "Thinking..." : "Send"}
       </button>
+      <button onClick={newChat} disabled={loading} style={{ marginLeft: 8 }}>
+        New chat
+      </button>
 
       {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
-
-      {result && (
-        <div style={{ marginTop: 16 }}>
-          <p style={{ whiteSpace: "pre-wrap" }}>{result.reply}</p>
-          <small>Answered by {result.model}</small>
-        </div>
-      )}
 
       {unavailable && (
         <section style={{ marginTop: 24 }}>
@@ -103,6 +131,7 @@ export default function Home(){
           />
           <input
             placeholder="Max price (PHP)"
+            inputMode="numeric"
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
           />
@@ -127,4 +156,3 @@ export default function Home(){
     </main>
   );
 }
-
