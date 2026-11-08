@@ -8,7 +8,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Dashboard" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)",  bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 50,}} className="mx-auto max-w-xs rounded-3xl border border-white/40 bg-white/70 p-1.5 shadow-lg shadow-black/10 backdrop-blur-xl">
+    <nav aria-label="Dashboard" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)",  bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 50, width: "min(18rem, calc(100vw - 24px))"}} className="mx-auto max-w-xs rounded-3xl border border-white/40 bg-white/70 p-1.5 shadow-lg shadow-black/10 backdrop-blur-xl">
       <ul className="flex items-center justify-around gap-1">
         
         {ITEMS.map(({ href, label, Icon, exact }) => {
