@@ -15,6 +15,10 @@ import { consumeRequest } from "@/services/usage/usage";
 const MAX_STEPS = 4;
 
 export async function POST(request: Request){
+
+    if (process.env.ASSISTANT_ENABLED !== "true") return NextResponse.json({ error: "Not found"}, {status: 404});
+    
+
     const parsed = bodySchema.safeParse(await request.json().catch(() => null));
     if(!parsed.success) return NextResponse.json({  error: "Invalid request body",},{ status: 400 });
 
