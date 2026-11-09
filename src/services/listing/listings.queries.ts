@@ -1,7 +1,7 @@
 import { cleanLocation } from "@/api/schema/assistant_schema";
-import { toListing, withValue } from "@/lib/services/listingFunctions";
+import { toCard, toListing, withValue } from "@/lib/services/listings.service";
 import { getSupabase } from "@/lib/supabase/server";
-import { listingRow, listingType } from "@/type/listingType";
+import { CardRow, ListingCardData, listingRow, listingType } from "@/type/listingType";
 
 
 const COLUMNS = `code, title, location, developers(name)`;
@@ -32,7 +32,6 @@ export async function searchListing( filters: { location?: string; property_type
     return ((data ?? []) as unknown as listingRow[]).map(toListing).sort((a,b) => lowestPrice(a) - lowestPrice(b));
 }
 
-
 // GET LISTING BY CODE
 export async function getListingByCode(code: string): Promise<listingType | null>{
     
@@ -47,5 +46,28 @@ export async function getListingByCode(code: string): Promise<listingType | null
     return (data as listingType | null) ?? null;
 }
 
+// GET ALL LISTING LIST
+export async function listListings( filters: { q?: string; location?: string; property_type?: string; max_price?: number}, limit=20): Promise<ListingCardData[]>{
 
+    const hasUnitFilter = filters.property_type !== undefined || filters.max_price !== undefined;
+    const details = `property_details${hasUnitFilter ? "!inner" : ""}(price)`;
 
+    let query = getSupabase()
+        .from("listings")
+        .select(`code, title, location, created_at, ${details}`)
+        .eq("status", "active")
+        .order("created_at", { ascending: false})
+        .limit(limit);
+
+    query = withValue(query, filters.location, (q, v) => q.ilike("location", `%${v}%`));
+    query = withValue(query, filters.property_type, (q, v) => q.eq("property_details.unit_type", v));
+    query = withValue(query, filters.max_price, (q, v) => q.lte("property_details.price", v));
+
+    const text = filters.q?.replace(/[,()*%\\]/g, " ").trim();
+    if(text) query = query.or(`title.ilike.*${text}*,location.ilike.*${text}*`);
+
+    const { data, error} = await query;
+    if(error) throw new Error(`Listing list failed: ${error.message}`);
+    return ((data ?? []) as unknown as CardRow[]).map(toCard);
+
+}

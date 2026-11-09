@@ -2,7 +2,7 @@ import z from "zod";
 import {PROPERTY_TYPES} from "@/type/db_types";
 import {defineTool} from "@/lib/ai/tool-types";
 import { SEARCHLISTINGS_PROMPT } from "@/api/assistant/prompt";
-import { searchListing } from "@/services/listing/listings";
+import { searchListing } from "@/services/listing/listings.queries";
 
 
 

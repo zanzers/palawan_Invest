@@ -1,5 +1,5 @@
 import { listingFiltersSchema } from "@/api/schema/assistant_schema";
-import { searchListing } from "@/services/listing/listings";
+import { searchListing } from "@/services/listing/listings.queries";
 import { NextResponse } from "next/server";
 
 
