@@ -32,6 +32,21 @@ type listingRow = {
 };
 
 
+type ListingCardData = {
+  code: string;
+  title: string;
+  location: string;
+  minPrice: number | null;
+  isNew: boolean;
+  imageUrl: string | null;
+};
 
+type CardRow = {
+  code: string;
+  title: string;
+  location: string;
+  created_at: string;
+  property_details: { price: number }[];
+};
 
-export type {listingType, unitType, Filters, listingRow};
+export type {listingType, unitType, Filters, listingRow, ListingCardData, CardRow};

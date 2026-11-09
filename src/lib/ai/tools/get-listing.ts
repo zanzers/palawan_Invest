@@ -1,7 +1,7 @@
 import z from "zod";
 import { defineTool } from "../tool-types";
 import { GETLISTINGS_PROMPT } from "@/api/assistant/prompt";
-import { getListingByCode } from "@/services/listing/listings";
+import { getListingByCode } from "@/services/listing/listings.queries";
 
 
 export const getListingsTool = defineTool({
