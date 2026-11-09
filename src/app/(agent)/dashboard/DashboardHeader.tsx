@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Props } from "@/type/DashboardType";
+import { Props } from "@/type/DashboardPropsType";
 import { BellIcon, EnvelopeSimpleIcon } from "@phosphor-icons/react";
 import PalInvestIcons from "../../../../public/icons/PalInvestIcons";
 import { IconLink } from "@/components/dashboard/DashboardFunctions";
@@ -9,7 +9,7 @@ import { IconLink } from "@/components/dashboard/DashboardFunctions";
 
 export default function DashboardHeader({ unreadMessages = 0, unreadNotifications = 0 }: Props) {
   return (
-    <header className="sticky top-4 z-40  backdrop-blur-xl" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <header className="sticky top-0 z-40 bg-slate-50/70 backdrop-blur-xl pt-[max(1rem,env(safe-area-inset-top))]">
       <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
  
 

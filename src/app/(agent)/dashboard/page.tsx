@@ -1,11 +1,20 @@
-import PagePlaceholder from "@/components/dashboard/PagePlaceholder";
+import { Suspense } from "react";
 import DashboardHeader from "./DashboardHeader";
+import SearchBar from "@/components/dashboard/SearchBar";
+import { LOCATIONS, PROPERTY_TYPES } from "@/app/config/filterOptions";
 
 export default function DashboardHome() {
   return (
     <>
-       <DashboardHeader  unreadMessages={0} unreadNotifications={0}/>
-      <PagePlaceholder title="Home" note="Lisitngs, search and categories go here" />
+       <div className="pt-8">
+        <DashboardHeader  unreadMessages={0} unreadNotifications={0}/>
+       </div>
+
+        <main className="mx-auto max-w-3xl px-4 pt-4">
+          <Suspense fallback={<div className="h-12" />}>
+            <SearchBar locations={LOCATIONS} types={PROPERTY_TYPES} />
+          </Suspense>
+        </main>
     
     </>
    
