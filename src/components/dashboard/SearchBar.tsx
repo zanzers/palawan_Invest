@@ -12,15 +12,15 @@ export default function SearchBar({ locations, types }: PropsLocations) {
    return (
     <div>
       <form onSubmit={onSubmitSearch} role="search">
-        <div className="flex h-12 items-center rounded-full border border-slate-200 bg-white pl-4 pr-1.5 transition has-[input:focus]:border-[#1C2216] has-[input:focus]:ring-2 has-[input:focus]:ring-[#1C2216]/15">
+        <div className="flex h-14 items-center rounded-full border border-slate-200 bg-white pl-4 pr-1.5 transition has-[input:focus]:border-[#1C2216] has-[input:focus]:ring-2 has-[input:focus]:ring-[#1C2216]/15">
           <MagnifyingGlassIcon size={20} aria-hidden="true" className="shrink-0 text-slate-400" />
 
           <label className="min-w-0 flex-1">
             <span className="sr-only">Search listings</span>
-            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search location or title" enterKeyHint="search" className="h-10 w-full bg-transparent px-3 text-base text-slate-900 outline-none placeholder:text-slate-400 md:text-sm"/>
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search location or title" enterKeyHint="search" className="h-12 w-[95%] bg-transparent px-3 text-base text-slate-900 outline-none placeholder:text-slate-400 md:text-sm"/>
           </label>
 
-          <button type="button" onClick={openSheet} aria-label={activeCount ? `Filters, ${activeCount} active` : "Filters"} className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1C2216] text-white transition active:scale-95">
+          <button type="button" onClick={openSheet} aria-label={activeCount ? `Filters, ${activeCount} active` : "Filters"} className="relative -translate-x-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1C2216] text-white transition active:scale-95">
 
             <SlidersHorizontalIcon size={20} aria-hidden="true" />
                 {activeCount > 0 && (
