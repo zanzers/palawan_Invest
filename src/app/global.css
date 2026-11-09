@@ -19,6 +19,8 @@
   /* Default Theme */
   --background: #080B1A;
   --foreground: #EDEDED;
+
+  --animate-sheet-up: sheet-up 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dark {
@@ -44,3 +46,8 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
