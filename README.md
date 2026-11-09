@@ -1,355 +1,287 @@
 [![CI](https://github.com/zanzers/palawan_Invest/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zanzers/palawan_Invest/actions/workflows/ci.yml)
+
 # AI Tool Calling Foundation
 
-
-**Version:** 1.2
-**Architecture:** Next.js + TypeScript + Supabase + OpenAI
+**Version:** 1.3
+**Product:** Palawan Home (rental, brokerage and project listings)
+**Architecture:** Next.js + TypeScript + Supabase + a provider-agnostic LLM client (free models)
 
 ## 1. Project Objective
 
-Build the foundation of an AI-powered real-estate platform, starting with an AI assistant that can understand user requests and interact with the application through controlled backend tools.
+Build the foundation of an AI-powered real-estate platform, starting with an AI assistant that can understand requests and interact with the application through controlled backend tools.
 
-The first priority is to understand and implement **LLM Tool Calling** before introducing advanced agents, RAG, automation, or specialized AI workflows.
+The first priority was to understand and implement **LLM tool calling** before introducing advanced agents, RAG, automation, or specialized AI workflows. The foundation is now in place, and the product is being built on top of it.
 
-The application should be designed so that additional capabilities can be added without rebuilding the foundation.
+### Product direction
 
-## 2. Technology Stack
+| Audience | Experience |
+| -------- | ---------- |
+| **Public visitors** | Browse the catalog with manual search and filters, and contact the agent directly to request a viewing. No AI is required to use the public site. |
+| **The agent** | A private dashboard with an AI assistant that creates and manages listings through validated tools, with human confirmation before any change. |
 
-| Technology     | Purpose                                          |
-| -------------- | ------------------------------------------------ |
-| Next.js        | Frontend and backend application                 |
-| TypeScript     | Application and backend programming language     |
-| Supabase       | PostgreSQL database, authentication, and storage |
-| OpenAI API     | LLM and tool-calling capabilities                |
-| Zod            | Input and tool-argument validation               |
-| Vercel         | Application deployment                           |
-| Git and GitHub | Version control and collaboration                |
+Design constraint: after launch the project uses **free tiers only** (hosting, database, and LLM). The app must keep working when the free LLM quota runs out, so the non-AI search path is a first-class feature.
+
+## 2. Status at a Glance
+
+| Milestone | Status |
+| --------- | ------ |
+| 1. LLM API integration | Done |
+| 2. First tool calling | Done |
+| 3. Tool registry | Done |
+| 4. Supabase integration | Done |
+| 5. Conversation management | Done |
+| 6. Security and authorization | In progress |
+| Agent dashboard (UI) | In progress (shell and bottom navigation) |
+| Public catalog (UI) | Planned |
+
+## 3. Technology Stack
+
+| Technology | Purpose |
+| ---------- | ------- |
+| Next.js (App Router, Turbopack) | Frontend and backend application |
+| TypeScript | Application and backend language |
+| Tailwind CSS | Styling |
+| Supabase | PostgreSQL, authentication, storage, Row Level Security |
+| Any OpenAI-compatible API | LLM and tool calling, currently OpenRouter free models |
+| Zod | Input and tool-argument validation |
+| Phosphor Icons | Icons |
+| GitHub Actions | Continuous integration |
+| Vercel | Deployment (planned) |
 
 ### Backend approach
 
-We will use Next.js Route Handlers and server-side code for backend functionality.
+Next.js Route Handlers and server-side code provide the backend. There is no separate Python service. One may be added later only if custom ML processing is needed.
 
-We do not need FastAPI or a separate Python backend for the initial project.
-
-Python may be introduced in a future project or as a separate service if we eventually need custom ML models, model training, or specialized Python-based processing.
-
-## 3. Initial Architecture
+## 4. Architecture
 
 ```text
-REAL ESTATE AI PLATFORM
+PALAWAN HOME
 │
-├── NEXT.JS APPLICATION
-│   │
-│   ├── Frontend
-│   │   ├── Dashboard
-│   │   ├── AI Assistant
-│   │   └── Listing Management
-│   │
-│   ├── Backend
-│   │   ├── Route Handlers
-│   │   ├── Authentication
-│   │   ├── Business Logic
-│   │   └── Database Services
-│   │
-│   └── AI Engineering
-│       ├── OpenAI Client
-│       ├── AI Orchestrator
-│       ├── Tool Registry
-│       ├── Tool Handlers
-│       └── Conversation Manager
+├── PUBLIC SIDE (planned)
+│   ├── Catalog: manual search, filters, listing pages
+│   ├── Viewing requests, with a notification to the agent
+│   └── Optional rule-based chatbot (no LLM)
+│
+├── AGENT SIDE
+│   ├── Dashboard (Home, Add, Contact)
+│   └── AI assistant for creating and managing listings
+│
+├── NEXT.JS BACKEND (Route Handlers)
+│   ├── POST /assistant   authenticated, rate limited, tool loop
+│   └── GET  /listings    direct search, no AI
+│
+├── AI ENGINEERING
+│   ├── LLM client: ordered targets with automatic fallback
+│   ├── Tool registry: defineTool + Zod validation
+│   ├── Tools: search_listings, get_listing
+│   └── Conversation manager: history and tool log
 │
 └── SUPABASE
-    ├── PostgreSQL
+    ├── PostgreSQL with RLS
     ├── Authentication
-    └── Storage
+    └── Storage (planned, for listing photos)
 ```
 
 ### AI request flow
 
-1. The user sends a message through the frontend.
-2. Next.js receives the request through an API Route Handler.
-3. The backend authenticates the user.
-4. The AI orchestrator sends the conversation and available tool definitions to OpenAI.
-5. The model decides whether it needs a tool.
-6. The backend validates and executes the requested tool.
-7. The tool result is returned to the model.
-8. The model generates a response.
-9. The frontend displays the response.
+1. The agent sends a message to `POST /assistant` with their Supabase access token.
+2. The route validates the body and verifies the session.
+3. `consume_request` enforces the per-user and global daily limits.
+4. The last 10 messages of the conversation are loaded (RLS limits this to the owner).
+5. The LLM client tries each configured target in order until one answers.
+6. If the model requests a tool, the registry validates the arguments with Zod, runs the handler, and returns the result. This repeats for up to 4 steps, and an identical repeated call is blocked.
+7. The final reply is returned, and the turn and every tool execution are saved.
 
-**Important:** The LLM does not directly access the database. It requests tools, and our backend controls their execution.
+**Important:** the LLM never accesses the database directly. It requests tools, and the backend controls their execution.
 
-## 4. Development Milestones
+### Direct search (no AI)
 
-### Milestone 1 — LLM API Integration
+`GET /listings?location=&type=&max_price=` validates its parameters with Zod and calls the same `searchListing` service the AI tool uses. The chat page falls back to it when the assistant returns 429, 502 or 503.
 
-**Goal:** Establish communication between Next.js and OpenAI.
+## 5. Configuration
 
-Topics:
+Copy `.env.example` to `.env` and fill in the values. Never commit `.env`.
 
-* API credentials and environment variables
-* OpenAI client initialization
-* Sending messages
-* Receiving model responses
-* Understanding request and response structures
-* Message roles
-* Token usage
-* API errors and error handling
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
-**Completion criteria:**
+# LLM targets, tried in order (up to 5). Any OpenAI-compatible API works.
+LLM_1_BASE_URL=https://openrouter.ai/api/v1
+LLM_1_API_KEY=
+LLM_1_MODEL=
 
-* Next.js can send a message to OpenAI.
-* The application receives and displays the response.
-* API credentials remain server-side.
+LLM_2_BASE_URL=https://openrouter.ai/api/v1
+LLM_2_API_KEY=
+LLM_2_MODEL=
 
-### Milestone 2 — First Tool Calling
-
-**Goal:** Understand how the model requests application functions.
-
-Our first tool will be:
-
-`search_listings`
-
-Topics:
-
-* What tool calling is
-* Tool definitions
-* JSON Schema
-* Tool parameters
-* Sending tools to OpenAI
-* Receiving tool-call requests
-* Executing backend functions
-* Returning tool results to the model
-* Handling the final model response
-
-Example request:
-
-```json
-{
-  "name": "search_listings",
-  "arguments": {
-    "location": "Makati",
-    "property_type": "Condominium"
-  }
-}
+# Kill switch: /assistant returns 404 unless this is "true"
+ASSISTANT_ENABLED=false
 ```
 
-Our backend will validate the arguments, execute the search, and return the results.
+- Switching or adding a provider is an env change only. A target with a missing value is skipped.
+- Free models are rotated or retired by their hosts without notice. If one stops working, copy a replacement ID from the provider's model page.
+- The service-role key is not used anywhere in this project.
 
-**Completion criteria:**
+### Run locally
 
-* The model can request `search_listings`.
-* Next.js can execute the corresponding function.
-* The result is returned to the model.
-* The model can explain the retrieved results to the user.
+```bash
+npm install
+npm run dev
+```
 
-### Milestone 3 — Tool Registry
+## 6. Database
 
-**Goal:** Build a reusable system for managing tools.
+| Table | Purpose |
+| ----- | ------- |
+| `listings` | Code, title, location, status, developer |
+| `property_details` | Unit type, price, floor area and lot area for each listing |
+| `property_specifications` | Key/value specifications for each unit |
+| `developers` | Developer names |
+| `conversations` | One row per assistant conversation, owned by a user |
+| `messages` | User and assistant messages |
+| `tool_executions` | Audit log of every tool call, with arguments, status and result |
+| `usage_events` | Request counts behind the daily limits (no direct client access) |
 
-Topics:
+Row Level Security is enabled on every table. Listing data is readable by the public (active listings only). Conversation data is readable and writable only by its owner. The `consume_request()` database function enforces the daily limits and has its limits fixed inside the function, so clients cannot change them.
 
-* Centralized tool definitions
-* Tool registration
-* Tool-name-to-handler mapping
-* Dynamic tool selection
-* Argument validation using Zod
-* Tool execution and error handling
+## 7. Development Milestones
 
-Initial planned tools:
+### Milestone 1: LLM API Integration (Done)
 
-| Tool              | Purpose                    |
-| ----------------- | -------------------------- |
-| `search_listings` | Search property listings   |
-| `get_listing`     | Retrieve listing details   |
-| `create_listing`  | Create a listing           |
-| `update_listing`  | Update listing information |
-| `archive_listing` | Archive a listing          |
+A provider-agnostic client built on the OpenAI SDK. Targets are configured through env variables and tried in order. A failed target (timeout, rate limit, retired model, empty response) falls through to the next, and only when all fail does the caller see an error. Credentials stay server-side.
 
-We will start with search and retrieval before introducing tools that modify data.
+### Milestone 2: First Tool Calling (Done)
 
-**Completion criteria:**
+`search_listings` is defined with a JSON Schema for the model and validated with Zod on the backend. The route runs the tool loop: model request, validation, execution, result returned, final answer.
 
-* Multiple tools can be registered.
-* The orchestrator can identify and execute the requested tool.
-* Invalid arguments and execution failures are handled safely.
+### Milestone 3: Tool Registry (Done)
 
-### Milestone 4 — Supabase Integration
+Tools are declared once with `defineTool` (name, description, JSON Schema, Zod schema, handler) and registered in a single list. The registry exposes tool definitions to the model and executes calls by name. Invalid arguments, unknown tools and thrown errors become safe error results.
 
-**Goal:** Connect the AI tools to the actual application database.
+| Tool | Purpose | Permission (planned) |
+| ---- | ------- | -------------------- |
+| `search_listings` | Search listings | `listings.read` |
+| `get_listing` | Get one listing by code | `listings.read` |
+| `create_listing` | Create a listing | `listings.create` |
+| `update_listing` | Update a listing | `listings.update` |
+| `archive_listing` | Archive a listing | `listings.archive` |
 
-Topics:
+The first two are implemented. The write tools come after roles and confirmation exist.
 
-* Creating a Supabase project
-* Environment configuration
-* PostgreSQL fundamentals
-* Database schema design
-* Supabase client setup
-* Server-side database operations
-* CRUD services
-* Data validation
-* Row Level Security (RLS)
+### Milestone 4: Supabase Integration (Done)
 
-Initial database entities will be designed around the real-estate domain, including projects, listings, property details, and related records.
+A normalized schema with RLS read policies. The tools read real data through a service layer, and return only selected columns so private fields can never reach the model.
 
-**Completion criteria:**
+### Milestone 5: Conversation Management (Done)
 
-* Next.js can securely communicate with Supabase.
-* Listing tools can retrieve real database records.
-* Backend services handle database operations.
-* Database access follows the application's authorization rules.
+Conversations, messages and tool executions are persisted per user. The last 10 user and assistant messages are replayed to the model. Tool results are deliberately not replayed, to save tokens on free models.
 
-### Milestone 5 — Conversation Management
+### Milestone 6: Security and Authorization (In progress)
 
-**Goal:** Allow the assistant to maintain context across multiple messages.
+Done:
 
-Topics:
+- [x] Input validation with Zod on every route and tool
+- [x] Server-side session verification
+- [x] Row Level Security on every table
+- [x] Per-user and global daily request limits
+- [x] Execution logging in `tool_executions`
+- [x] Service-role credentials never used or exposed
+- [x] No arbitrary SQL from model output
+- [x] Kill switch for the assistant route
 
-* Conversation persistence
-* Message persistence
-* Retrieving conversation history
-* Sending conversation context to OpenAI
-* Tool-call history
-* Multiple tool calls
-* Context-window management
-* Error recovery
+Remaining:
 
-Proposed tables:
+- [ ] Agent login (accounts are created manually, with no public sign-up)
+- [ ] Roles and a permission check in the tool registry
+- [ ] Write tools with human confirmation
+- [ ] Log who ran each tool, and whether it was allowed or denied
 
-**conversations**
-
-* id
-* user_id
-* title
-* created_at
-* updated_at
-
-**messages**
-
-* id
-* conversation_id
-* role
-* content
-* created_at
-
-**tool_executions**
-
-* id
-* conversation_id
-* message_id
-* tool_name
-* arguments
-* execution_status
-* result
-* created_at
-
-The exact schema will be finalized during implementation.
-
-**Completion criteria:**
-
-* Conversations and messages are saved.
-* The assistant can retrieve previous messages.
-* Tool calls and results are tracked.
-* Multi-turn conversations work correctly.
-
-### Milestone 6 — Security and Authorization
-
-**Goal:** Ensure that AI tools cannot perform unauthorized operations.
-
-Topics:
-
-* Supabase Authentication
-* User identity verification
-* Server-side authorization
-* Role-based permissions
-* Supabase RLS
-* Tool permission mapping
-* Input validation
-* Secure environment variables
-* Execution logging
-* Human approval for sensitive operations
-
-Initial permission mapping:
-
-| Tool              | Permission         |
-| ----------------- | ------------------ |
-| `search_listings` | `listings.read`    |
-| `get_listing`     | `listings.read`    |
-| `create_listing`  | `listings.create`  |
-| `update_listing`  | `listings.update`  |
-| `archive_listing` | `listings.archive` |
-
-Important rules:
-
-* The AI assistant does not automatically inherit administrator privileges.
-* Every tool execution must respect the authenticated user's permissions.
-* Sensitive changes should require user confirmation.
-* Never allow arbitrary SQL execution through an LLM-generated request.
-* Service-role credentials must never be exposed to the frontend.
-
-**Completion criteria:**
-
-* Users can only access authorized data.
-* Tool execution checks permissions.
-* Sensitive operations require appropriate confirmation.
-* Errors and executions are logged.
-
-## 5. Initial Project Folder Structure
-
-We will build this incrementally rather than creating every folder immediately.
-
-A possible target structure:
+## 8. Project Structure
 
 ```text
 src/
-│
 ├── app/
-│   └── api/
-│       └── assistant/
-│           └── route.ts
+│   ├── (agent)/
+│   │   ├── auth/              login and sign-up (placeholders)
+│   │   └── dashboard/         agent shell: Home, Add, Contact
+│   ├── assistant/route.ts     POST /assistant
+│   └── listings/route.ts      GET /listings
+│
+├── api/
+│   ├── assistant/prompt.ts    system prompt and tool descriptions
+│   └── schema/                Zod schemas for request bodies and filters
 │
 ├── lib/
-│   ├── openai/
-│   │   └── client.ts
-│   │
-│   ├── supabase/
-│   │   ├── client.ts
-│   │   └── server.ts
-│   │
-│   └── ai/
-│       ├── orchestrator.ts
-│       ├── registry.ts
-│       ├── conversation.ts
-│       │
-│       └── tools/
-│           ├── definitions/
-│           └── handlers/
+│   ├── ai/                    registry, tool types, tools/
+│   ├── auth/                  session verification
+│   ├── client_lib/            LLM client errors
+│   ├── openai/client.ts       multi-target LLM client
+│   ├── services/              listing helpers
+│   └── supabase/              browser, server and user clients
 │
 ├── services/
-│   └── listings/
+│   ├── listing/               listing search and lookup
+│   ├── conversation/          history and persistence
+│   └── usage/                 daily request limits
 │
-└── types/
+├── components/
+│   ├── dashboard/             bottom navigation, page placeholders
+│   └── ui/                    shared UI components
+│
+└── type/                      shared TypeScript types
 ```
 
-This is a target structure, not a requirement to create everything on day one.
+## 9. Development Workflow
 
-## 6. Future Expansion — Not Part of the Initial Milestones
+### Continuous integration
 
-Once the foundation is stable, we can consider:
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`:
 
-* RAG and semantic search
-* Embeddings
-* Advanced agent workflows
-* AI listing descriptions
-* Social media caption generation
-* Poster generation
-* Video generation
-* Scheduled automation
-* Specialized AI agents
-* Custom ML services
+1. Install dependencies (`npm ci`)
+2. Generate Next.js types
+3. Type check (`tsc --noEmit`)
+4. Lint with zero warnings allowed
+5. Tests, when a test script exists
+6. Production build, using dummy environment values
 
-These capabilities should be introduced when the application actually needs them.
+`main` is protected by a ruleset, so every change goes through a pull request.
 
-## 7. Development Principles
+### Shipping a change
+
+```powershell
+.\.scripts\ship.ps1 "feat: short description"
+```
+
+The script runs type generation, the type check and lint locally and stops on any problem. It then creates a branch from `main`, commits, pushes, opens a pull request, waits for CI, checks for conflicts, and asks before squash-merging. Commit messages follow the conventional style (`feat:`, `fix:`, `docs:`, `refactor:`).
+
+## 10. Security Rules
+
+- The AI assistant does not inherit administrator privileges.
+- Every tool execution must respect the authenticated user's permissions.
+- Sensitive changes require explicit user confirmation.
+- Never allow arbitrary SQL through an LLM-generated request.
+- Service-role credentials must never be exposed to the frontend.
+- Free LLM endpoints may log prompts, so tools return only the fields that are safe to share, and no private client data is sent to a model.
+
+## 11. Roadmap
+
+Next steps, in order:
+
+1. Agent dashboard: Home (listings, search, categories), Add listing (AI-assisted and manual), Contact.
+2. Agent login, roles, and tool permissions.
+3. Write tools (`create_listing`, `update_listing`, `archive_listing`) with a confirmation step.
+4. Listing photos in Supabase Storage.
+5. Public catalog: search, filters, listing detail pages.
+6. Viewing requests with a notification to the agent.
+7. Facebook Page posting: AI-written captions generated in batches, approved by the agent, then scheduled through the Graph API.
+8. Optional rule-based chatbot for the public site.
+9. Automated tests for the validation, registry and service layers.
+
+Schema additions needed for the catalog design: a listing type (sale or rent), a category (rental, brokerage or project), and featured and recommended flags.
+
+## 12. Development Principles
 
 1. Understand the underlying concepts before relying on abstractions.
 2. Build incrementally and test each milestone.
@@ -358,19 +290,16 @@ These capabilities should be introduced when the application actually needs them
 5. Keep database access under backend control.
 6. Validate every tool argument.
 7. Enforce authorization independently of the model.
-8. Avoid unnecessary services and infrastructure.
-9. Design for future expansion without implementing future requirements prematurely.
+8. Degrade gracefully: the app must work when the AI is unavailable.
+9. Avoid unnecessary services and infrastructure, and stay within free tiers.
+10. Design for future expansion without implementing future requirements prematurely.
 
-## 8. Initial Definition of Done
+## 13. Definition of Done for the Foundation
 
-The initial AI Tool Calling foundation is complete when:
-
-* The application communicates with OpenAI.
-* The assistant can request registered tools.
-* The backend validates and executes those tools.
-* Tools can retrieve real-estate data from Supabase.
-* Conversations persist across multiple messages.
-* Tool executions are tracked.
-* Authentication and authorization protect application data.
-
-**Our immediate starting point is Milestone 1: LLM API Integration.**
+- [x] The application communicates with an LLM through a provider-agnostic client.
+- [x] The assistant can request registered tools.
+- [x] The backend validates and executes those tools.
+- [x] Tools retrieve real-estate data from Supabase.
+- [x] Conversations persist across multiple messages.
+- [x] Tool executions are tracked.
+- [ ] Authentication and authorization protect all application data, including write operations.
