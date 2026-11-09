@@ -14,7 +14,7 @@ export default function FilterForm({ locations, types, value, onApply, onClose,}
       <header className="flex items-center justify-between px-5 pt-5">
         <h2 className="text-lg font-extrabold tracking-tight">Filters</h2>
 
-        <button type="button" onClick={onClose} aria-label="Close filters" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-black/5">
+        <button type="button" onClick={onClose} aria-label="Close filters" className="flex h-9 w-9 items-center justify-center rounded-full  text-slate-500 hover:bg-black/5">
           <XIcon size={20} />
         </button>
 
