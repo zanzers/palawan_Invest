@@ -88,3 +88,10 @@ body {
     animation: none;
   }
 }
+
+
+@media (pointer: fine) {
+  .row-scroll::-webkit-scrollbar { height: 6px; }
+  .row-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  .row-scroll::-webkit-scrollbar-track { background: transparent; }
+}

@@ -1,3 +1,4 @@
+
 import { listListings } from "@/services/listing/listings.queries";
 import ListingSection from "./ListingSection";
 
@@ -8,21 +9,29 @@ export type HomeFilters = {
   maxPrice?: string;
 };
 
-export default async function FeaturedListings({ filters,}: { filters: HomeFilters }) {
+const HOME_LIMIT = 8;
+
+export default async function FeaturedListings({
+  filters,
+}: {
+  filters: HomeFilters;
+}) {
   const maxPrice = Number(filters.maxPrice);
+
+  const query = {
+    q: filters.q,
+    location: filters.location,
+    property_type: filters.type,
+    max_price:
+      Number.isFinite(maxPrice) && maxPrice > 0
+        ? maxPrice
+        : undefined,
+  };
 
   let listings;
 
   try {
-    listings = await listListings({
-      q: filters.q,
-      location: filters.location,
-      property_type: filters.type,
-      max_price:
-        Number.isFinite(maxPrice) && maxPrice > 0
-          ? maxPrice
-          : undefined,
-    });
+    listings = await listListings(query, HOME_LIMIT);
   } catch (err) {
     console.error("Failed to load listings:", err);
 
