@@ -49,4 +49,21 @@ type CardRow = {
   property_details: { price: number }[];
 };
 
-export type {listingType, unitType, Filters, listingRow, ListingCardData, CardRow};
+type ListingPropsType = { 
+  title: string; 
+  seeAllHref: string; 
+  listings: ListingCardData[] 
+};
+
+
+
+
+export type {
+  listingType,
+  unitType,
+  Filters,
+  listingRow,
+  ListingCardData,
+  CardRow, 
+  ListingPropsType
+};
