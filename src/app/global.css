@@ -95,3 +95,14 @@ body {
   .row-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
   .row-scroll::-webkit-scrollbar-track { background: transparent; }
 }
+
+
+.step-forward { animation: step-in-right 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+.step-back    { animation: step-in-left 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes step-in-right { from { opacity: 0; transform: translateX(24px); }  to { opacity: 1; transform: translateX(0); } }
+@keyframes step-in-left  { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .step-forward, .step-back { animation: none; }
+}
