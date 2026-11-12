@@ -1,3 +1,6 @@
+type PhotoDraft = { id: string; file: File; previewUrl: string };
+
+
 type unitType = {
     unit_type: string;
     price: number;
@@ -55,7 +58,16 @@ type ListingPropsType = {
   listings: ListingCardData[] 
 };
 
+export const Categories = [
+  "rental", 
+  "brokerage", 
+  "project"
+] as const;
 
+export const ListingStatus = [
+  "sale",
+  "rent"
+] as const;
 
 
 export type {
@@ -65,5 +77,6 @@ export type {
   listingRow,
   ListingCardData,
   CardRow, 
-  ListingPropsType
+  ListingPropsType,
+  PhotoDraft
 };
