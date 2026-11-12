@@ -1,11 +1,10 @@
+import AddListingForm from "./AddListingForm";
 
-
-import PagePlaceholder from "@/components/dashboard/PagePlaceholder";
 
 export default function AddListings() {
   return (
-   
-    <PagePlaceholder title="Add Listings" note="Auto and manual createion go here" />
+    <main className="mx-auto max-w-3xl px-4 pb-8 pt-[max(1rem,env(safe-area-inset-top))]">
+      <AddListingForm />
+    </main>
   );
 }
-
