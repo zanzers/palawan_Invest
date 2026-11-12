@@ -303,3 +303,5 @@ Schema additions needed for the catalog design: a listing type (sale or rent), a
 - [x] Conversations persist across multiple messages.
 - [x] Tool executions are tracked.
 - [ ] Authentication and authorization protect all application data, including write operations.
+
+
