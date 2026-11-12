@@ -1,4 +1,4 @@
-import AddListingWizard from "@/components/create-listing/addListingWizard";
+import AddListingForm from "./AddListingForm";
 
 
 export default function AddListingPage() {
@@ -7,7 +7,7 @@ export default function AddListingPage() {
       <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Add listing</h1>
       <p className="mt-1 text-sm text-slate-500">A few quick steps. Nothing is published until you confirm.</p>
       <div className="mt-6">
-        <AddListingWizard />
+        <AddListingForm />
       </div>
     </main>
   );
