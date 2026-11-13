@@ -1,3 +1,4 @@
+import { getProvinceFromPostalCode } from "@/lib/postalCode/philippinePostalCodes";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -14,9 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = new URL(
-      "https://nominatim.openstreetmap.org/reverse"
-    );
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
 
     url.searchParams.set("format", "jsonv2");
     url.searchParams.set("lat", String(lat));
@@ -30,43 +29,40 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
     });
 
-    const responseText = await response.text();
+    
 
     if (!response.ok) {
       const errorDetails = await response.text();
 
-      console.error("NOMINATIM STATUS:", response.status);
-      console.error("NOMINATIM RESPONSE:", errorDetails);
-
       return NextResponse.json(
         {
           error: "Nominatim rejected the request",
-          status: response.status,
           details: errorDetails,
         },
         { status: 502 }
       );
     }
-    const data = JSON.parse(responseText);
 
-    console.log("FULL API RESPONSE:", data);
-    console.log("ALL AVAILABLE ADDRESS FIELDS:", data.details);
+    const data = await response.json();
+    const postcode = data?.postcode || "";
+    const province = getProvinceFromPostalCode(postcode);
 
-    console.log("ALL AVAILABLE ADDRESS FIELDS:", data.details);
+    const displayName = data.display_name?.replace(postcode, province);
+
+    console.log(
+      "API RESPONSE:", 
+      data.lat,
+      data.lon,
+      displayName
+    );
+
 
     return NextResponse.json({
-      address: [
-        data.address?.road || data.address?.pedestrian || data.address?.residential,
-        data.address?.suburb || data.address?.village,
-        data.address?.city || data.address?.town || data.address?.municipality,
-        data.address?.province || "Palawan",
-        data.address?.region,
-        data.address?.country,
-      ]
-        .filter(Boolean)
-        .join(", "),
-      details: data.address ?? null,
+      lat: Number(data.lat),
+      lon: Number(data.lon),
+      display_name: displayName,
     });
+
   } catch (error) {
     console.error("Reverse geocoding error:", error);
 

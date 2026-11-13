@@ -1,116 +1,21 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  useMap,
-  useMapEvents,
-  CircleMarker,
-  Popup,
-} from "react-leaflet";
-
 import "leaflet/dist/leaflet.css";
-import { getProvinceFromPostalCode } from "@/lib/postalCode/philippinePostalCodes";
-
-type Coordinates = {
-  lat: number;
-  lng: number;
-};
-
-type PropertyMapProps = {
-  height?: string;
-  onAddressSelect?: (address: string) => void;
-};
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup,} from "react-leaflet";
+import { getAddressFromCoordinates } from "@/lib/map/getAddress";
+import { MapCenter, MapClickHandler, MapControls } from "@/lib/map/propertyMap.lib";
+import { Coordinates, DEFAULT_LOCATION, PropertyMapProps } from "@/type/mapType";
 
 
-const DEFAULT_LOCATION: Coordinates = {
-  lat: 12.8797,
-  lng: 121.774,
-};
+export default function PropertyMap({ height = "350px", onAddressSelect }: PropertyMapProps) {
 
-function MapClickHandler({
-  onSelect,
-}: {
-  onSelect: (coordinates: Coordinates) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      onSelect({
-        lat: Number(e.latlng.lat.toFixed(6)),
-        lng: Number(e.latlng.lng.toFixed(6)),
-      });
-    },
-  });
-
-  return null;
-}
+  const [agentLocation, setAgentLocation] = useState<Coordinates | null>(null);
+  const [position, setPosition] = useState<Coordinates | null>(null);
+  const [locationStatus, setLocationStatus] = useState("Locating your position...");
 
 
-
-function MapControls({
-  agentLocation,
-}: {
-  agentLocation: Coordinates | null;
-}) {
-  const map = useMap();
-
-  const goToMyLocation = () => {
-    if (!agentLocation) return;
-
-    map.flyTo(
-      [agentLocation.lat, agentLocation.lng],
-      16,
-      { duration: 1 }
-    );
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={goToMyLocation}
-      disabled={!agentLocation}
-      className="absolute bottom-4 right-4 z-[1000] flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-md border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-      title="My location"
-    >
-      <span className="text-lg">◎</span>
-    </button>
-  );
-}
-
-function MapCenter({
-  location,
-}: {
-  location: Coordinates | null;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (location) {
-      map.flyTo(
-        [location.lat, location.lng],
-        16,
-        { duration: 1 }
-      );
-    }
-  }, [location, map]);
-
-  return null;
-}
-
-export default function PropertyMap({
-  height = "350px",
-  onAddressSelect,
-}: PropertyMapProps) {
-  const [agentLocation, setAgentLocation] =
-    useState<Coordinates | null>(null);
-
-  const [position, setPosition] =
-    useState<Coordinates | null>(null);
-
-  const [locationStatus, setLocationStatus] =
-    useState("Locating your position...");
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -131,9 +36,7 @@ export default function PropertyMap({
         console.log("Agent location:", coordinates);
       },
       () => {
-        setLocationStatus(
-          "Location unavailable. You can still select on the map."
-        );
+        setLocationStatus("Location unavailable. You can still select on the map.");
       },
       {
         enableHighAccuracy: true,
@@ -141,56 +44,45 @@ export default function PropertyMap({
         maximumAge: 60000,
       }
     );
+
   }, []);
+  
+  console.log("Your Locations cannot find,", locationStatus);
 
-const handleSelect = async (coordinates: Coordinates) => {
-  setPosition(coordinates);
+  const handleSelect = async (coordinates: Coordinates) => {
+    setPosition(coordinates);
 
-  console.log("Selected property coordinates:", coordinates);
+    console.log("Selected property coordinates:", coordinates);
 
-  const address = await getAddressFromCoordinates(
-    coordinates.lat,
-    coordinates.lng
-  );
+    const address = await getAddressFromCoordinates( coordinates.lat, coordinates.lng);
 
-  console.log("Address to input:", address);
-  console.log("Address to postcode:", address.postcode);
+    if (!address) {
+      console.error("Unable to retrieve address.");
+      return;
+    }
 
-  onAddressSelect?.(address || "");
+  console.log("Complete address:", address.fullAddress);
+  console.log("Address details:", address);
 
-};
+  onAddressSelect?.(address.fullAddress);
+
+  };
 
   return (
     <div className="space-y-3">
-      <div
-        className="relative overflow-hidden rounded-xl border border-slate-200"
-        style={{ height }}
-      >
-        <MapContainer
-          center={[
-            DEFAULT_LOCATION.lat,
-            DEFAULT_LOCATION.lng,
-          ]}
-          zoom={6}
-          scrollWheelZoom
-          className="h-full w-full z-0"
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+      <div className="relative overflow-hidden rounded-xl border border-slate-200" style={{ height }}>
+        <MapContainer center={[  DEFAULT_LOCATION.lat,  DEFAULT_LOCATION.lng,]} zoom={6} scrollWheelZoom className="h-full w-full z-0">
+
+          <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
 
           <MapCenter location={agentLocation} />
 
           <MapClickHandler onSelect={handleSelect} />
 
-          {/* Agent's current location */}
+
           {agentLocation && (
             <CircleMarker
-              center={[
-                agentLocation.lat,
-                agentLocation.lng,
-              ]}
+              center={[ agentLocation.lat, agentLocation.lng ]}
               radius={7}
               pathOptions={{
                 color: "#ffffff",
@@ -203,7 +95,7 @@ const handleSelect = async (coordinates: Coordinates) => {
             </CircleMarker>
           )}
 
-          {/* Selected property location */}
+
           {position && (
             <CircleMarker
               center={[position.lat, position.lng]}
@@ -226,26 +118,14 @@ const handleSelect = async (coordinates: Coordinates) => {
           <MapControls agentLocation={agentLocation} />
         </MapContainer>
       </div>
+      
 
-      <p className="text-xs text-slate-500">
+        {/* Agent location finder */}
+      {/* <p className="text-xs text-slate-500">
         {locationStatus}
-      </p>
+      </p> */}
 
-      {position && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="mb-1 text-xs font-medium text-slate-700">
-            Selected property coordinates
-          </p>
 
-          <p className="text-sm text-slate-600">
-            Latitude: {position.lat}
-          </p>
-
-          <p className="text-sm text-slate-600">
-            Longitude: {position.lng}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
@@ -255,40 +135,3 @@ const handleSelect = async (coordinates: Coordinates) => {
 
 
 
-
-async function getAddressFromCoordinates(
-  lat: number,
-  lng: number
-) {
-  try {
-    const response = await fetch(
-      `/api/reverse-geocode?lat=${lat}&lng=${lng}`
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Address lookup failed");
-    }
-
-    console.log("========== REVERSE GEOCODING ==========");
-    console.log("Full response:", data);
-    console.log("Property address:", data.address);
-    console.log("Address details:", data.details);
-    console.log("Street:", data.details?.road ?? "Not available");
-    console.log("Barangay:", data.details?.suburb ?? "Not available");
-    console.log("City:", data.details?.city ?? "Not available");
-    const province = getProvinceFromPostalCode(data.details.postcode || "");
-    console.log("Province:", province || "Not available");
-    console.log("Region:", data.details?.region ?? "Not available");
-    console.log("Postal code:", data.details?.postcode ?? "Not available");
-    console.log("Country:", data.details?.country ?? "Not available");
-    
-    console.log("========================================");
-
-    return data.address ?? null;
-  } catch (error) {
-    console.error("Reverse geocoding error:", error);
-    return null;
-  }
-}
