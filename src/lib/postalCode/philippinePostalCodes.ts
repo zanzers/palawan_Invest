@@ -1,7 +1,4 @@
-const POSTAL_CODE_LOOKUP: Record<
-  string,
-  { province: string; city: string; region: string }
-> = {
+const POSTAL_CODE_LOOKUP: Record<string, { province: string; city: string; region: string }> = {
   "5300": {
     province: "Palawan",
     city: "Puerto Princesa",
