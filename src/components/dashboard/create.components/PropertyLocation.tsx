@@ -14,34 +14,20 @@ const PropertyMap = dynamic(() => import("./PropertyMap"), {
   ),
 });
 
-export default function PropertyLocation({
-  draft,
-  set,
-}: {
-  draft: ListingDraft;
-  set: SetField;
-}) {
+export default function PropertyLocation({ draft, set, }: { draft: ListingDraft;set: SetField; }) {
   return (
     <Section title="Property location">
       <div>
+        <Label>Pin property location</Label>
+        <PropertyMap height="350px" onAddressSelect={(address) => set("address", address)}/>
+
         <Label htmlFor="address">Street address</Label>
 
-        <input
-          id="address"
-          className={fieldClass}
-          placeholder="Street, barangay, city"
-          value={draft.address}
-          onChange={(e) => set("address", e.target.value)}
-        />
+        <input id="address" className={fieldClass} placeholder="Street, barangay, city" value={draft.address} onChange={(e) => set("address", e.target.value)}/>
       </div>
 
       <div>
-        <Label>Pin property location</Label>
-
-        <PropertyMap
-          height="350px"
-          onAddressSelect={(address) => set("address", address)}
-        />
+       
       </div>
     </Section>
   );
