@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { SYSTEM_PROMPT } from "@/api/assistant/prompt";
-import { bodySchema } from "@/api/schema/assistant_schema";
+import { SYSTEM_PROMPT } from "@/app/api/assistant/prompt";
+import { bodySchema } from "@/app/api/schema/assistant_schema";
 
 import { AllProvidersFailedError } from "@/lib/client_lib/client_lib";
 import { createChatCompletion } from "@/lib/openai/client";

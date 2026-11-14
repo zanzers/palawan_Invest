@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-
 import { Section, Label, fieldClass } from "./fields";
 import { ListingDraft, SetField } from "@/type/addTypes";
+
 
 const PropertyMap = dynamic(() => import("./PropertyMap"), {
   ssr: false,
@@ -14,20 +14,41 @@ const PropertyMap = dynamic(() => import("./PropertyMap"), {
   ),
 });
 
-export default function PropertyLocation({ draft, set, }: { draft: ListingDraft;set: SetField; }) {
+export default function PropertyLocation({ draft, set, }: { draft: ListingDraft; set: SetField; }) {
+
+  const pinned = draft.latitude !== null && draft.longitude !== null;
+
   return (
     <Section title="Property location">
       <div>
         <Label>Pin property location</Label>
-        <PropertyMap height="350px" onAddressSelect={(address) => set("address", address)}/>
 
-        <Label htmlFor="address">Street address</Label>
+        <PropertyMap 
+          height="350px" 
+          onPick={(p) => { 
+            set("latitude", p.lat); 
+            set("longitude", p.lng); 
+            if(p.address) set("location", p.address)}
+          }/>
 
-        <input id="address" className={fieldClass} placeholder="Street, barangay, city" value={draft.address} onChange={(e) => set("address", e.target.value)}/>
+        <p className={`mt-1.5 text-xs ${pinned ? "text-emerald-700" : "text-slate-500"}`}>
+          {pinned ? `Pinned at ${draft.latitude}, ${draft.longitude}` : "Tap the map to drop a pin. The pin is required."}
+        </p>
+
       </div>
 
+
+
       <div>
-       
+        <Label htmlFor="location">Location (shown on the listing)</Label>
+        <textarea
+          id="location"
+          rows={2}
+          className={fieldClass}
+          placeholder="Tap the map and the address fills in. You can edit it."
+          value={draft.location}
+          onChange={(e) => set("location", e.target.value)}
+        />
       </div>
     </Section>
   );

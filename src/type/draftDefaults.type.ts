@@ -16,15 +16,18 @@ export const newUnit = (): UnitDraft => ({
 });
 
 export const createEmptyDraft = (): ListingDraft => ({
-  description: "",
   title: "",
-  category: "",
-  listing_type: "",
-  developer: "",
-  units: [newUnit()],
+  description: "",
+  propertyType: "",
+  bedrooms: "",
+  bathrooms: "",
+  area: "",
+  price: "",
   amenities: [],
   location: "",
-  address: "",
-  latitude: "",
-  longitude: "",
+  latitude: null,
+  longitude: null,
 });
+
+
+

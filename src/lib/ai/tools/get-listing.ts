@@ -1,6 +1,6 @@
 import z from "zod";
 import { defineTool } from "../tool-types";
-import { GETLISTINGS_PROMPT } from "@/api/assistant/prompt";
+import { GETLISTINGS_PROMPT } from "@/app/api/assistant/prompt";
 import { getListingByCode } from "@/services/listing/listings.queries";
 
 

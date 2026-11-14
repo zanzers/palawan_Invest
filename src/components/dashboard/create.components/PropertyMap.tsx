@@ -9,7 +9,7 @@ import { MapCenter, MapClickHandler, MapControls } from "@/lib/map/propertyMap.l
 import { Coordinates, DEFAULT_LOCATION, PropertyMapProps } from "@/type/mapType";
 
 
-export default function PropertyMap({ height = "350px", onAddressSelect }: PropertyMapProps) {
+export default function PropertyMap({ height = "350px", onAddressSelect, onPick}: PropertyMapProps) {
 
   const [agentLocation, setAgentLocation] = useState<Coordinates | null>(null);
   const [position, setPosition] = useState<Coordinates | null>(null);
@@ -54,17 +54,18 @@ export default function PropertyMap({ height = "350px", onAddressSelect }: Prope
 
     console.log("Selected property coordinates:", coordinates);
 
-    const address = await getAddressFromCoordinates( coordinates.lat, coordinates.lng);
+    const place = await getAddressFromCoordinates( coordinates.lat, coordinates.lng);
+    
 
-    if (!address) {
-      console.error("Unable to retrieve address.");
-      return;
-    }
+    if (!place) {console.error("Unable to retrieve address."); return;}
+    
 
-  console.log("Complete address:", address.fullAddress);
-  console.log("Address details:", address);
+    console.log("Complete address:", place.fullAddress);
+    console.log("Address details:", place);
 
-  onAddressSelect?.(address.fullAddress);
+    onPick?.({lat: coordinates.lat, lng: coordinates.lng, address: place?.fullAddress ?? ""});
+
+    onAddressSelect?.(place.fullAddress);
 
   };
 

@@ -13,25 +13,33 @@ type UnitDraft = {
 };
 
 type ListingDraft = {
-    description: string;
-    title: string;
-    category: "" | "rental" | "brokerage" | "project";
-    listing_type: "" | "sale" | "rent";
-    developer: string;
-    units: UnitDraft[];
-    amenities: string[];
-    location: string;
-    address: string;
-    latitude: string;
-    longitude: string;
+  title: string;
+  description: string;
+  propertyType: string;
+  bedrooms: string;
+  bathrooms: string;
+  area: string;
+  price: string;
+  amenities: string[];
+  location: string;          
+  latitude: number | null;  
+  longitude: number | null;
 };
 
+type SetField = <K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) => void;
 
-export const STEP_FIELDS: Record<StepId, string[]> = {
-  1: ["description"],
-  2: ["title", "category", "listing_type", "developer", "units"],
-  3: ["amenities"],
-  4: ["location", "address", "latitude", "longitude"],
+export const EMPTY_DRAFT: ListingDraft = {
+  title: "",
+  description: "",
+  propertyType: "",
+  bedrooms: "",
+  bathrooms: "",
+  area: "",
+  price: "",
+  amenities: [],
+  location: "",
+  latitude: null,
+  longitude: null,
 };
 
 
@@ -39,5 +47,6 @@ export type {
     UnitDraft,
     ListingDraft,
     StepId,
-    FieldErrors
+    FieldErrors,
+    SetField
 }

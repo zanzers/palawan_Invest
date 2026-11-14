@@ -44,12 +44,12 @@ type ListingCardData = {
   imageUrl: string | null;
 };
 
-type CardRow = {
+type CardViewRow = {
   code: string;
   title: string;
   location: string;
+  min_price: number | string | null;
   created_at: string;
-  property_details: { price: number }[];
 };
 
 type ListingPropsType = { 
@@ -76,7 +76,7 @@ export type {
   Filters,
   listingRow,
   ListingCardData,
-  CardRow, 
+  CardViewRow, 
   ListingPropsType,
   PhotoDraft
 };

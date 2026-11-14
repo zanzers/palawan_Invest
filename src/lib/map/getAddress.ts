@@ -1,3 +1,4 @@
+import { formatPhilippineAddress } from "@/utils/address/formatPhilippineAddress";
 
 export async function getAddressFromCoordinates(lat: number, lng: number) {
   try {
@@ -7,12 +8,16 @@ export async function getAddressFromCoordinates(lat: number, lng: number) {
 
 
     if (!response.ok) throw new Error(data.error || "Address lookup failed");
+
+    const fullAddress = formatPhilippineAddress(data.address ?? {});
+
     
+    console.log("Full Address:",fullAddress);
 
     return {
         lat: data.lat,
         lon: data.lon,
-        fullAddress: data.display_name,
+        fullAddress,
     };
     
   } catch (error) {
