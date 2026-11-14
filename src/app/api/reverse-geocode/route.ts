@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "PropertyListingApp/1.0 (your-real-email@gmail.com)",
+        "User-Agent": "PropertyListingApp/1.0 (nowellsaavedra999@gmail.com)",
         "Accept-Language": "en",
       },
       cache: "no-store",
@@ -44,24 +44,27 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    const postcode = data?.postcode || "";
-    const province = getProvinceFromPostalCode(postcode);
+    const postcode = data?.address?.postcode ?? "";
+    const province = postcode ? (getProvinceFromPostalCode(postcode) ?? ""): "";
 
-    const displayName = data.display_name?.replace(postcode, province);
+    const displayName: string = postcode && province && data.display_name ? data.display_name.replace(postcode, province) : (data.display_name ?? "");
+    if (process.env.NODE_ENV !== "production") console.log("Reverse geocode:", displayName);
 
-    console.log(
-      "API RESPONSE:", 
-      data,
-      data.lat,
-      data.lon,
-      displayName
-    );
+
+    // console.log(
+    //   "API RESPONSE:", 
+    //   data,
+    //   data.lat,
+    //   data.lon,
+    //   displayName
+    // );
 
 
     return NextResponse.json({
       lat: Number(data.lat),
       lon: Number(data.lon),
       display_name: displayName,
+      address: data.address,
     });
 
   } catch (error) {

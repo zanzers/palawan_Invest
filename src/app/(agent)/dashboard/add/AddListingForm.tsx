@@ -7,6 +7,7 @@ import ListingPreview from "../preview/ListingPreview";
 import PropertyDetails from "@/components/dashboard/create.components/PropertyDetails";
 import AddPropertyDetails from "@/components/dashboard/create.components/AddPropertyDetails";
 import PropertyLocation from "@/components/dashboard/create.components/PropertyLocation";
+import { useSaveListing } from "@/utils/savedListings/useSaveListing";
 
 
 type Step = "form" | "preview";
@@ -20,14 +21,27 @@ export default function AddListingForm() {
     
     const previews = useMemo(() => files.map((file) => URL.createObjectURL(file)),[files]);
 
+    const {save, saving, error: saveError, created} = useSaveListing();
+
     useEffect(() => {
     return () => { previews.forEach((url) => URL.revokeObjectURL(url));};
     }, [previews]);
 
-  const canPreview = draft.title.trim() && draft.propertyType && draft.price.trim() && draft.location;
+  const canPreview = Boolean(draft.title.trim() && draft.propertyType && draft.price.trim() && draft.location.trim() && draft.latitude !== null && draft.longitude !== null );
 
-  if (step === "preview") return <ListingPreview draft={draft} set={set} />;
-  
+  if (step === "preview") {
+    return (
+      <ListingPreview
+        draft={draft}
+        previews={previews}
+        onConfirm={() => save(draft)}
+        onBack={() => setStep("form")}
+        saving={saving}
+        error={saveError}
+        created={created}
+      />
+    );
+  }
 
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (canPreview) setStep("preview") }}>
@@ -45,5 +59,6 @@ export default function AddListingForm() {
         </button>
       </div>
     </form>
+
   );
 }

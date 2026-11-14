@@ -1,4 +1,4 @@
-import {listingType, listingRow, CardRow, ListingCardData } from "@/type/listingType";
+import {listingType, listingRow, CardViewRow, ListingCardData } from "@/type/listingType";
 
 
 const NEW_WITHIN_DAYS = 7;
@@ -30,15 +30,13 @@ export function toListing(row: listingRow): listingType{
 
 
 
-export function toCard(row: CardRow): ListingCardData {
-
-    const prices = (row.property_details ?? []).map((u) => u.price);
+export function toCard(row: CardViewRow): ListingCardData {
 
     return {
         code: row.code,
         title: row.title,
         location: row.location,
-        minPrice: prices.length ? Math.min(...prices) : null,
+        minPrice: row.min_price === null ? null : Number(row.min_price),
         isNew: Date.now() - new Date(row.created_at).getTime() < NEW_WITHIN_DAYS * 86_400_000,
         imageUrl: null,
     }
