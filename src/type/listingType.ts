@@ -9,6 +9,10 @@ type unitType = {
     specifications?: {specifications: string; value: string}[];
 }
 
+type onCreateMore = {
+  finished: boolean;
+  onCreateMore: () => void;
+}
 
 type listingType ={
     code: string;
@@ -78,5 +82,7 @@ export type {
   ListingCardData,
   CardViewRow, 
   ListingPropsType,
-  PhotoDraft
+  PhotoDraft,
+  onCreateMore
+
 };

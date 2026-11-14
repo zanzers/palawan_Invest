@@ -21,7 +21,7 @@ export default function AddListingForm() {
     
     const previews = useMemo(() => files.map((file) => URL.createObjectURL(file)),[files]);
 
-    const {save, saving, error: saveError, created} = useSaveListing();
+    const { save, saving, error: saveError, created, uploads, finished } = useSaveListing();
 
     useEffect(() => {
     return () => { previews.forEach((url) => URL.revokeObjectURL(url));};
@@ -32,14 +32,17 @@ export default function AddListingForm() {
   if (step === "preview") {
     return (
       <ListingPreview
-        draft={draft}
-        previews={previews}
-        onConfirm={() => save(draft)}
-        onBack={() => setStep("form")}
-        saving={saving}
-        error={saveError}
-        created={created}
-      />
+          draft={draft}
+          previews={previews}
+          onConfirm={() => save(draft, files)}
+          onBack={() => setStep("form")}
+          saving={saving}
+          error={saveError}
+          created={created}
+          uploads={uploads}
+          finished={finished}
+          onCreateMore={() =>{setStep("form")}}
+        />
     );
   }
 

@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { AuthResult } from "@/type/clientType";
 import { getUserSupabase } from "@/lib/supabase/user";
 
-export async function authenticate( request: Request,): Promise<{ db: SupabaseClient } | { response: NextResponse }> {
+export async function authenticate( request: Request,): Promise<AuthResult > {
+  
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return { response: NextResponse.json({ error: "Not signed in" }, { status: 401 }) };
   
 
   const db = getUserSupabase(token);
-  const { error } = await db.auth.getUser(token);
-  if (error) return { response: NextResponse.json({ error: "Invalid session" }, { status: 401 }) };
+  const {data, error} = await db.auth.getUser(token);
   
 
-  return { db };
+  if (error || !data.user) return { response: NextResponse.json({ error: "Invalid session" }, { status: 401 }) };
+  
+
+  return { db, user: data.user};
 }
