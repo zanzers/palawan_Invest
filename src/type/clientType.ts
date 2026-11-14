@@ -1,3 +1,6 @@
+import { NextResponse } from "next/server";
+import { SupabaseClient, User } from "@supabase/supabase-js";
+
 type AssistantReply ={
     reply: string;
     model: string;
@@ -43,6 +46,8 @@ type Rejection = { status: number; error: string };
 
 
 
+type AuthResult = | {db: SupabaseClient; user: User} | {response: NextResponse};
+
 
 
 export type {
@@ -52,5 +57,6 @@ export type {
     DirectListing, 
     ToolRuns, 
     HistoryMessage,
-    Rejection
+    Rejection,
+    AuthResult
 }
