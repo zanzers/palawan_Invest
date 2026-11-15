@@ -30,15 +30,16 @@ export function toListing(row: listingRow): listingType{
 
 
 
-export function toCard(row: CardViewRow): ListingCardData {
+export function toCard(row: CardViewRow, imageUrl: string | null = null): ListingCardData {
 
     return {
+        id: row.id,
         code: row.code,
         title: row.title,
         location: row.location,
         minPrice: row.min_price === null ? null : Number(row.min_price),
         isNew: Date.now() - new Date(row.created_at).getTime() < NEW_WITHIN_DAYS * 86_400_000,
-        imageUrl: null,
+        imageUrl,
     }
     
 }

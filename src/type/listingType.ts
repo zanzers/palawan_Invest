@@ -40,6 +40,7 @@ type listingRow = {
 
 
 type ListingCardData = {
+  id: string;
   code: string;
   title: string;
   location: string;
@@ -49,6 +50,7 @@ type ListingCardData = {
 };
 
 type CardViewRow = {
+  id: string;
   code: string;
   title: string;
   location: string;

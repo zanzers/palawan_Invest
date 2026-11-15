@@ -2,6 +2,7 @@ import { cleanLocation } from "@/app/api/schema/assistant_schema";
 import { toCard, toListing, withValue } from "@/lib/services/listings.service";
 import { getSupabase } from "@/lib/supabase/server";
 import { CardViewRow, ListingCardData, listingRow, listingType } from "@/type/listingType";
+import { BUCKET } from "@/type/uploadImagesTpye";
 
 
 const COLUMNS = `code, title, location, developers(name)`;
@@ -51,7 +52,7 @@ export async function listListings( filters: { q?: string; location?: string; pr
 
     let query = getSupabase()
         .from("listing_cards")
-        .select(`code, title, location, created_at, min_price`)
+        .select(`id, code, title, location, created_at, min_price`)
         .eq("status", "active")
         .order("created_at", { ascending: false})
         .limit(limit);
@@ -65,6 +66,33 @@ export async function listListings( filters: { q?: string; location?: string; pr
 
     const { data, error} = await query;
     if(error) throw new Error(`Listing list failed: ${error.message}`);
-    return ((data ?? []) as unknown as CardViewRow[]).map(toCard);
+
+    const listings = (data ?? []) as CardViewRow[];
+    if(listings.length === 0 ) return [];
+
+    const listingIds = listings.map((listing) => listing.id);
+
+    const { data: images, error: imageError } = await getSupabase()
+        .from("images")
+        .select("listing_id, file_path, created_at")
+        .in("listing_id", listingIds)
+        .order("created_at", { ascending: true });
+
+    if (imageError) throw new Error(`Listing images failed: ${imageError.message}`);
+
+    const imageMap = new Map<string, string>();
+
+    for (const image of (images as Array<{ listing_id: string; file_path: string; created_at: string }> ?? [])) {
+        if (imageMap.has(image.listing_id)) continue;
+
+        const { data: publicUrlData } = getSupabase()
+            .storage
+            .from(BUCKET)
+            .getPublicUrl(image.file_path);
+
+        imageMap.set(image.listing_id, publicUrlData.publicUrl ?? "");
+    }
+
+    return listings.map((listing) => toCard(listing, imageMap.get(listing.id) ?? null));
 
 }
