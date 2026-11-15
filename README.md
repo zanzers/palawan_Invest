@@ -2,37 +2,39 @@
 
 # AI Tool Calling Foundation
 
-**Version:** 1.3
-**Product:** Palawan Home (rental, brokerage and project listings)
+**Version:** 1.4
+**Product:** PalHome, rental, brokerage and project listings in Palawan
 **Architecture:** Next.js + TypeScript + Supabase + a provider-agnostic LLM client (free models)
 
 ## 1. Project Objective
 
-Build the foundation of an AI-powered real-estate platform, starting with an AI assistant that can understand requests and interact with the application through controlled backend tools.
+Build the foundation of an AI-powered real-estate platform, starting with an AI assistant that can understand requests and act on the application only through controlled backend tools.
 
-The first priority was to understand and implement **LLM tool calling** before introducing advanced agents, RAG, automation, or specialized AI workflows. The foundation is now in place, and the product is being built on top of it.
+The foundation (LLM client, tool calling, tool registry, database, conversations) is complete. The product is now being built on top of it: an agent dashboard where listings are created with a map pin and photos, and later a public catalog.
 
 ### Product direction
 
 | Audience | Experience |
 | -------- | ---------- |
-| **Public visitors** | Browse the catalog with manual search and filters, and contact the agent directly to request a viewing. No AI is required to use the public site. |
-| **The agent** | A private dashboard with an AI assistant that creates and manages listings through validated tools, with human confirmation before any change. |
+| **Public visitors** | Browse the catalog with manual search and filters, and contact the agent to request a viewing. No AI is needed to use the public site. |
+| **The agent** | A private dashboard to create and manage listings, with an AI assistant that works through validated tools and asks for confirmation before changing data. |
 
-Design constraint: after launch the project uses **free tiers only** (hosting, database, and LLM). The app must keep working when the free LLM quota runs out, so the non-AI search path is a first-class feature.
+Design constraint: after launch the project uses **free tiers only** (hosting, database, storage and LLM). The app must keep working when the free LLM quota runs out, so non-AI paths (search, forms) are first-class features.
 
 ## 2. Status at a Glance
 
-| Milestone | Status |
-| --------- | ------ |
+| Area | Status |
+| ---- | ------ |
 | 1. LLM API integration | Done |
 | 2. First tool calling | Done |
 | 3. Tool registry | Done |
 | 4. Supabase integration | Done |
 | 5. Conversation management | Done |
 | 6. Security and authorization | In progress |
-| Agent dashboard (UI) | In progress (shell and bottom navigation) |
-| Public catalog (UI) | Planned |
+| Agent dashboard: Home, Add listing, listing detail | In progress |
+| Agent dashboard: Contact, Inbox, Notifications | Placeholders |
+| Deployment (Vercel, continuous deployment) | Next |
+| Public site (catalog, visit requests) | Planned |
 
 ## 3. Technology Stack
 
@@ -41,34 +43,43 @@ Design constraint: after launch the project uses **free tiers only** (hosting, d
 | Next.js (App Router, Turbopack) | Frontend and backend application |
 | TypeScript | Application and backend language |
 | Tailwind CSS | Styling |
-| Supabase | PostgreSQL, authentication, storage, Row Level Security |
+| Supabase | PostgreSQL, authentication, Storage, Row Level Security |
 | Any OpenAI-compatible API | LLM and tool calling, currently OpenRouter free models |
 | Zod | Input and tool-argument validation |
+| Leaflet and OpenStreetMap | Map pin picker and listing map |
+| Nominatim | Reverse geocoding (address from a map pin) |
 | Phosphor Icons | Icons |
 | GitHub Actions | Continuous integration |
-| Vercel | Deployment (planned) |
+| Vercel | Deployment (next) |
 
 ### Backend approach
 
-Next.js Route Handlers and server-side code provide the backend. There is no separate Python service. One may be added later only if custom ML processing is needed.
+Next.js Route Handlers and server-side code provide the backend. Multi-table writes run inside PostgreSQL functions so they are atomic. There is no separate Python service.
 
 ## 4. Architecture
 
 ```text
-PALAWAN HOME
-│
-├── PUBLIC SIDE (planned)
-│   ├── Catalog: manual search, filters, listing pages
-│   ├── Viewing requests, with a notification to the agent
-│   └── Optional rule-based chatbot (no LLM)
+PALHOME
 │
 ├── AGENT SIDE
-│   ├── Dashboard (Home, Add, Contact)
-│   └── AI assistant for creating and managing listings
+│   ├── Login (email and password, accounts created by hand)
+│   ├── Dashboard: Home, Add, Contact, Inbox, Notifications
+│   │   ├── Home: search, filters, Featured row
+│   │   ├── Add: form, map pin, photos, preview, create
+│   │   └── Listing detail: photos, price, details, amenities, map
+│   └── AI assistant (tool calling, daily limits, kill switch)
+│
+├── PUBLIC SIDE (planned)
+│   ├── Catalog and listing pages
+│   ├── Visit requests with a notification to the agent
+│   └── Optional rule-based chatbot (no LLM)
 │
 ├── NEXT.JS BACKEND (Route Handlers)
-│   ├── POST /assistant   authenticated, rate limited, tool loop
-│   └── GET  /listings    direct search, no AI
+│   ├── POST /assistant                          AI assistant
+│   ├── GET  /listings                           direct search, no AI
+│   ├── POST /listings                           create a listing (admin only)
+│   ├── POST /api/listings/[listingId]/images    upload one photo (owner only)
+│   └── GET  /api/reverse-geocode                address from coordinates
 │
 ├── AI ENGINEERING
 │   ├── LLM client: ordered targets with automatic fallback
@@ -77,9 +88,9 @@ PALAWAN HOME
 │   └── Conversation manager: history and tool log
 │
 └── SUPABASE
-    ├── PostgreSQL with RLS
+    ├── PostgreSQL with RLS and database functions
     ├── Authentication
-    └── Storage (planned, for listing photos)
+    └── Storage (listing photos)
 ```
 
 ### AI request flow
@@ -90,13 +101,21 @@ PALAWAN HOME
 4. The last 10 messages of the conversation are loaded (RLS limits this to the owner).
 5. The LLM client tries each configured target in order until one answers.
 6. If the model requests a tool, the registry validates the arguments with Zod, runs the handler, and returns the result. This repeats for up to 4 steps, and an identical repeated call is blocked.
-7. The final reply is returned, and the turn and every tool execution are saved.
+7. The reply is returned, and the turn and every tool execution are saved.
 
 **Important:** the LLM never accesses the database directly. It requests tools, and the backend controls their execution.
 
+### Creating a listing
+
+1. The agent fills the form, taps the map to drop a pin, and adds photos.
+2. The browser reverse-geocodes the pin through `/api/reverse-geocode` and fills in the display address.
+3. The preview screen shows what will be saved.
+4. `POST /listings` validates the payload with Zod and calls the `create_listing` database function. The function checks `is_admin()` and writes the listing, its details, its location and its specifications in one transaction.
+5. Photos are resized in the browser (about 1600 px, WebP) and uploaded one at a time to `POST /api/listings/[listingId]/images`, with per-photo progress. A failed photo can be retried without recreating the listing.
+
 ### Direct search (no AI)
 
-`GET /listings?location=&type=&max_price=` validates its parameters with Zod and calls the same `searchListing` service the AI tool uses. The chat page falls back to it when the assistant returns 429, 502 or 503.
+`GET /listings?location=&type=&max_price=` validates its parameters with Zod and reads the same service layer the AI tool uses. It is the fallback when the assistant is unavailable.
 
 ## 5. Configuration
 
@@ -120,9 +139,9 @@ LLM_2_MODEL=
 ASSISTANT_ENABLED=false
 ```
 
-- Switching or adding a provider is an env change only. A target with a missing value is skipped.
+- Switching or adding an LLM provider is an env change only. A target with a missing value is skipped.
 - Free models are rotated or retired by their hosts without notice. If one stops working, copy a replacement ID from the provider's model page.
-- The service-role key is not used anywhere in this project.
+- The Supabase service-role key is not used anywhere in this project.
 
 ### Run locally
 
@@ -131,26 +150,51 @@ npm install
 npm run dev
 ```
 
+### Admin account
+
+Agent accounts are created by hand in Supabase (Authentication, Users), then added to the admin list:
+
+```sql
+insert into public.user_roles (user_id, role)
+select id, 'admin' from auth.users where email = 'agent@example.com';
+```
+
+There is no public sign-up.
+
 ## 6. Database
 
 | Table | Purpose |
 | ----- | ------- |
-| `listings` | Code, title, location, status, developer |
-| `property_details` | Unit type, price, floor area and lot area for each listing |
-| `property_specifications` | Key/value specifications for each unit |
+| `listings` | Code, title, description, status, created_by, developer |
+| `property_details` | Unit type, price, floor area and lot area of each listing |
+| `locations` | Display address, latitude and longitude of each unit |
+| `property_specifications` | Key/value specifications (bedrooms, bathrooms, one row per amenity) |
+| `images` | Photo storage path and position for each listing |
 | `developers` | Developer names |
-| `conversations` | One row per assistant conversation, owned by a user |
-| `messages` | User and assistant messages |
+| `user_roles` | Which accounts are admins |
+| `conversations`, `messages` | Assistant conversations, owned by a user |
 | `tool_executions` | Audit log of every tool call, with arguments, status and result |
 | `usage_events` | Request counts behind the daily limits (no direct client access) |
 
-Row Level Security is enabled on every table. Listing data is readable by the public (active listings only). Conversation data is readable and writable only by its owner. The `consume_request()` database function enforces the daily limits and has its limits fixed inside the function, so clients cannot change them.
+Database functions:
+
+| Function | Purpose |
+| -------- | ------- |
+| `is_admin()` | True when the caller is in `user_roles` |
+| `create_listing(payload)` | Admin-only. Writes a listing and its related rows in one transaction |
+| `consume_request()` | Enforces the per-user and global daily limits (limits fixed inside the function) |
+
+Notes:
+
+- Row Level Security is enabled on every table. Active listings are publicly readable. Conversation data is readable only by its owner. Listing writes go through `create_listing` rather than direct inserts.
+- A unit can have only one value per specification (one `bedrooms`), except `amenities`, which has many rows and no duplicates.
+- Photos live in a public Storage bucket. Only admins can upload or remove objects.
 
 ## 7. Development Milestones
 
 ### Milestone 1: LLM API Integration (Done)
 
-A provider-agnostic client built on the OpenAI SDK. Targets are configured through env variables and tried in order. A failed target (timeout, rate limit, retired model, empty response) falls through to the next, and only when all fail does the caller see an error. Credentials stay server-side.
+A provider-agnostic client built on the OpenAI SDK. Targets come from env variables and are tried in order. A failed target (timeout, rate limit, retired model, empty response) falls through to the next, and only when all fail does the caller see an error. Credentials stay server-side.
 
 ### Milestone 2: First Tool Calling (Done)
 
@@ -168,11 +212,11 @@ Tools are declared once with `defineTool` (name, description, JSON Schema, Zod s
 | `update_listing` | Update a listing | `listings.update` |
 | `archive_listing` | Archive a listing | `listings.archive` |
 
-The first two are implemented. The write tools come after roles and confirmation exist.
+The first two are implemented. The write tools come after tool permissions and confirmation exist. Listings can already be created through the dashboard form.
 
 ### Milestone 4: Supabase Integration (Done)
 
-A normalized schema with RLS read policies. The tools read real data through a service layer, and return only selected columns so private fields can never reach the model.
+A normalized schema with RLS. The tools read real data through a service layer and return only selected columns, so private fields cannot reach the model.
 
 ### Milestone 5: Conversation Management (Done)
 
@@ -182,21 +226,27 @@ Conversations, messages and tool executions are persisted per user. The last 10 
 
 Done:
 
-- [x] Input validation with Zod on every route and tool
+- [x] Input validation with Zod on routes and tools
 - [x] Server-side session verification
 - [x] Row Level Security on every table
 - [x] Per-user and global daily request limits
 - [x] Execution logging in `tool_executions`
-- [x] Service-role credentials never used or exposed
+- [x] Service-role key never used or exposed
 - [x] No arbitrary SQL from model output
 - [x] Kill switch for the assistant route
+- [x] Agent login (email and password, manual accounts)
+- [x] Admin role (`user_roles`, `is_admin()`)
+- [x] Admin-only listing creation and photo upload
 
 Remaining:
 
-- [ ] Agent login (accounts are created manually, with no public sign-up)
-- [ ] Roles and a permission check in the tool registry
+- [ ] Restrict `/assistant` to admins
+- [ ] Permission check inside the tool registry
 - [ ] Write tools with human confirmation
-- [ ] Log who ran each tool, and whether it was allowed or denied
+- [ ] Edit and archive endpoints, with admin and ownership checks
+- [ ] Log who ran each tool and whether it was allowed or denied
+- [ ] Server-side guard for dashboard pages
+- [ ] Turn off anonymous sign-ins once the assistant is admin-only
 
 ## 8. Project Structure
 
@@ -204,32 +254,36 @@ Remaining:
 src/
 ├── app/
 │   ├── (agent)/
-│   │   ├── auth/              login and sign-up (placeholders)
-│   │   └── dashboard/         agent shell: Home, Add, Contact
+│   │   ├── auth/                  login (sign-up is a placeholder)
+│   │   └── dashboard/             Home, add, view/[listingId], contact, inbox, notifications
+│   ├── api/
+│   │   ├── listings/[listingId]/images/   photo upload
+│   │   ├── reverse-geocode/               address lookup
+│   │   ├── assistant/                     system prompt and tool descriptions
+│   │   └── schema/                        Zod schemas
 │   ├── assistant/route.ts     POST /assistant
-│   └── listings/route.ts      GET /listings
+│   ├── listings/route.ts      GET and POST /listings
+│   └── config/                filter options
 │
-├── api/
-│   ├── assistant/prompt.ts    system prompt and tool descriptions
-│   └── schema/                Zod schemas for request bodies and filters
+├── components/
+│   ├── dashboard/             navigation, search, filters, create form parts
+│   ├── ListingCards/          cards, rows, skeletons
+│   └── ListingDetails/        gallery and property info
 │
 ├── lib/
 │   ├── ai/                    registry, tool types, tools/
 │   ├── auth/                  session verification
-│   ├── client_lib/            LLM client errors
-│   ├── openai/client.ts       multi-target LLM client
-│   ├── services/              listing helpers
-│   └── supabase/              browser, server and user clients
+│   ├── openai/                multi-target LLM client
+│   ├── supabase/              browser, server, user and upload helpers
+│   ├── map/                   map components and address lookup
+│   └── format/                price formatting
 │
 ├── services/
-│   ├── listing/               listing search and lookup
+│   ├── listing/               listing queries
 │   ├── conversation/          history and persistence
 │   └── usage/                 daily request limits
 │
-├── components/
-│   ├── dashboard/             bottom navigation, page placeholders
-│   └── ui/                    shared UI components
-│
+├── utils/                     upload checks, image resizing, save hook
 └── type/                      shared TypeScript types
 ```
 
@@ -263,38 +317,67 @@ The script runs type generation, the type check and lint locally and stops on an
 - Sensitive changes require explicit user confirmation.
 - Never allow arbitrary SQL through an LLM-generated request.
 - Service-role credentials must never be exposed to the frontend.
-- Free LLM endpoints may log prompts, so tools return only the fields that are safe to share, and no private client data is sent to a model.
+- Hiding a button is not security: every write is checked on the server and in the database.
+- Free LLM endpoints may log prompts, so tools return only fields that are safe to share, and no private client data is sent to a model.
 
-## 11. Roadmap
+## 11. Design Principles in Practice
 
-Next steps, in order:
+- **Dependency inversion:** the assistant route depends on `createChatCompletion`, `executeTool` and `getToolDefinitions`, not on a specific provider or tool. Upload helpers receive their database client as a parameter.
+- **Open for extension:** a new tool is one `defineTool` call plus one line in the registry. A new LLM provider is a set of env variables.
+- **Single responsibility:** authentication, rate limiting, validation, persistence and tool execution are separate modules.
+- **Graceful degradation:** direct search and the manual create form work when the AI is unavailable.
 
-1. Agent dashboard: Home (listings, search, categories), Add listing (AI-assisted and manual), Contact.
-2. Agent login, roles, and tool permissions.
-3. Write tools (`create_listing`, `update_listing`, `archive_listing`) with a confirmation step.
-4. Listing photos in Supabase Storage.
-5. Public catalog: search, filters, listing detail pages.
-6. Viewing requests with a notification to the agent.
-7. Facebook Page posting: AI-written captions generated in batches, approved by the agent, then scheduled through the Graph API.
-8. Optional rule-based chatbot for the public site.
-9. Automated tests for the validation, registry and service layers.
+## 12. Before the First Deployment
 
-Schema additions needed for the catalog design: a listing type (sale or rent), a category (rental, brokerage or project), and featured and recommended flags.
+- [ ] Delete `src/app/debug-tool/route.ts`.
+- [ ] Set environment variables in the host's settings (never in the repo).
+- [ ] Keep `ASSISTANT_ENABLED` off in production until the assistant is admin-only.
+- [ ] Turn off anonymous sign-ins in Supabase if nothing needs them.
+- [ ] Confirm RLS is enabled on every table and that no service-role key is used.
+- [ ] Check that the Storage bucket is public for reads and admin-only for writes.
+- [ ] Move the geocoder contact address out of the source code and into an environment variable.
+- [ ] Check the free-tier terms of the host and of Supabase (commercial use, project pausing).
 
-## 12. Development Principles
+## 13. Known Issues and Technical Debt
+
+Some code is temporary and will be refactored after the first deployment.
+
+- Property types are listed in more than one place and should come from a single list.
+- Some unused schema files from an earlier design remain and should be deleted.
+- `/api/reverse-geocode` is public and calls Nominatim, which allows about one request per second and asks for a real contact. It should require a session and be rate limited.
+- The Home cards do not show cover photos yet.
+- `search_listings`, `get_listing` and `GET /listings` must be kept in step with the normalized schema (the address now lives in `locations`).
+- Dashboard pages are not yet guarded on the server. Writes are protected, reads of public data are not.
+- The Contact, Inbox and Notifications pages are placeholders.
+- Only one unit per listing is supported. Several units for the project category are planned.
+
+## 14. Roadmap
+
+1. **Deploy** to the host and enable continuous deployment, then fix what the deployed environment reveals.
+2. **Listing detail:** finish the page, then wire edit and archive with admin and ownership checks.
+3. **Cover photos** on the Home cards.
+4. **AI-assisted creation:** paste a description, let the LLM fill the form, fall back to manual entry when the quota is used up.
+5. **Admin-only assistant**, tool permissions, and write tools with a confirmation step.
+6. **Home sections:** Recommended, Brokerage and Rental, plus category tabs. This needs a listing type (sale or rent), a category, and featured and recommended flags.
+7. **Public site:** catalog and listing pages, "Contact" and "Schedule a visit", with a notification to the agent.
+8. **Facebook Page posting:** AI-written captions generated in batches, approved by the agent, then scheduled through the Graph API.
+9. Optional rule-based chatbot for the public site.
+10. Automated tests for validation, the registry and the service layer.
+
+## 15. Development Principles
 
 1. Understand the underlying concepts before relying on abstractions.
 2. Build incrementally and test each milestone.
 3. Keep predictable business logic in normal TypeScript functions.
 4. Use the LLM for language understanding, reasoning, and tool selection.
 5. Keep database access under backend control.
-6. Validate every tool argument.
+6. Validate every input and tool argument.
 7. Enforce authorization independently of the model.
 8. Degrade gracefully: the app must work when the AI is unavailable.
 9. Avoid unnecessary services and infrastructure, and stay within free tiers.
 10. Design for future expansion without implementing future requirements prematurely.
 
-## 13. Definition of Done for the Foundation
+## 16. Definition of Done for the Foundation
 
 - [x] The application communicates with an LLM through a provider-agnostic client.
 - [x] The assistant can request registered tools.
@@ -302,6 +385,4 @@ Schema additions needed for the catalog design: a listing type (sale or rent), a
 - [x] Tools retrieve real-estate data from Supabase.
 - [x] Conversations persist across multiple messages.
 - [x] Tool executions are tracked.
-- [ ] Authentication and authorization protect all application data, including write operations.
-
-
+- [ ] Authentication and authorization protect all application data, including every write the AI can perform.
