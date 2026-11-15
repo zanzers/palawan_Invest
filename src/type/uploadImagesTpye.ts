@@ -1,3 +1,4 @@
+import { ListingImage } from "./listingType";
 
 
 export type uploadImagesProps = {
@@ -5,6 +6,11 @@ export type uploadImagesProps = {
     previews: string[];
     onFilesChange: (file: File[]) => void;
 }
+
+export type ListingImageProps = {
+  images: ListingImage[];
+  title: string;
+};
 
 
 export const BUCKET = "Palawan_Invest";

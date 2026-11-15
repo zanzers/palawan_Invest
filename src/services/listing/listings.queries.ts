@@ -1,7 +1,7 @@
 import { cleanLocation } from "@/app/api/schema/assistant_schema";
 import { toCard, toListing, withValue } from "@/lib/services/listings.service";
 import { getSupabase } from "@/lib/supabase/server";
-import { CardViewRow, ListingCardData, listingRow, listingType } from "@/type/listingType";
+import { CardViewRow, ListingCardData, ListingDetails, ListingImage, listingRow, listingType } from "@/type/listingType";
 import { BUCKET } from "@/type/uploadImagesTpye";
 
 
@@ -34,17 +34,29 @@ export async function searchListing( filters: { location?: string; property_type
 }
 
 // GET LISTING BY CODE
-export async function getListingByCode(code: string): Promise<listingType | null>{
+export async function getListingById(id: string): Promise<ListingDetails | null> {
+    const supabase = getSupabase();
     
-    const {data, error} = await getSupabase()
-        .from("listings")
-        .select(`${COLUMNS}, property_details(${UNIT_COLUMNS}, property_specifications(specification, value))`)
-        .eq("status", "active")
-        .eq("code", code.toUpperCase())
-        .maybeSingle();
+    const { data, error } = await supabase.rpc("get_listing_details", {p_listing_id: id});
 
-    if(error) throw new Error(`Listing search failed: ${error.message}`);
-    return (data as listingType | null) ?? null;
+    if (error) throw new Error(`Listing search failed: ${error.message}`);
+
+    if(!data) return null;
+
+    const listing = data as Omit<ListingDetails, "images"> & {
+        images: Omit<ListingImage, "imageUrl">[];
+    };
+
+    return {
+    ...listing,
+    images: (listing.images ?? []).map((image) => ({
+      ...image,
+      imageUrl: supabase.storage
+        .from("Palawan_Invest")
+        .getPublicUrl(image.file_path).data.publicUrl,
+    })),
+  };
+
 }
 
 // GET ALL LISTING LIST
