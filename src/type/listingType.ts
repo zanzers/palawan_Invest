@@ -64,6 +64,44 @@ type ListingPropsType = {
   listings: ListingCardData[] 
 };
 
+type ListingImage = {
+  id: string;
+  file_path: string;
+  position: number;
+  imageUrl: string;
+};
+
+type ListingDetails = {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+
+  property_details: {
+    id: string;
+    unit_type: string;
+    price: number;
+    floor_area: number | null;
+    lot_area: number | null;
+
+    specifications: {
+      specification: string;
+      value: string;
+    }[];
+
+    location: {
+      address: string;
+      latitude: number;
+      longitude: number;
+    } | null;
+  }[];
+
+  images: ListingImage[];
+};
+
+
 export const Categories = [
   "rental", 
   "brokerage", 
@@ -85,6 +123,8 @@ export type {
   CardViewRow, 
   ListingPropsType,
   PhotoDraft,
-  onCreateMore
+  onCreateMore,
+  ListingImage,
+  ListingDetails
 
 };

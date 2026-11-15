@@ -1,7 +1,7 @@
 import z from "zod";
 import { defineTool } from "../tool-types";
 import { GETLISTINGS_PROMPT } from "@/app/api/assistant/prompt";
-import { getListingByCode } from "@/services/listing/listings.queries";
+import { getListingById } from "@/services/listing/listings.queries";
 
 
 export const getListingsTool = defineTool({
@@ -18,7 +18,7 @@ export const getListingsTool = defineTool({
       schema: z.object({ code: z.string().min(1)}),
 
       handler: async ({ code }) => {
-        const listing = await getListingByCode(code);
+        const listing = await getListingById(code);
         return listing ?? {
           error: `No listing found with  code ${code}`
         }
