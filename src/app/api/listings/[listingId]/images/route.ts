@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ listing
   }
 
   try {
-    // Only the person who created the listing can add images to it
+
     const { data: listing, error: listingError } = await db
       .from("listings")
       .select("id")
