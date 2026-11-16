@@ -16,7 +16,7 @@ The foundation (LLM client, tool calling, tool registry, database, conversations
 
 | Audience | Experience |
 | -------- | ---------- |
-| **Public visitors** | Browse the catalog with manual search and filters, and contact the agent to request a viewing. No AI is needed to use the public site. |
+| **Public visitors** | Browse the catalog with manual search and filters, and profile the agent to request a viewing. No AI is needed to use the public site. |
 | **The agent** | A private dashboard to create and manage listings, with an AI assistant that works through validated tools and asks for confirmation before changing data. |
 
 Design constraint: after launch the project uses **free tiers only** (hosting, database, storage and LLM). The app must keep working when the free LLM quota runs out, so non-AI paths (search, forms) are first-class features.
@@ -32,7 +32,7 @@ Design constraint: after launch the project uses **free tiers only** (hosting, d
 | 5. Conversation management | Done |
 | 6. Security and authorization | In progress |
 | Agent dashboard: Home, Add listing, listing detail | In progress |
-| Agent dashboard: Contact, Inbox, Notifications | Placeholders |
+| Agent dashboard: profile, Inbox, Notifications | Placeholders |
 | Deployment (Vercel, continuous deployment) | Next |
 | Public site (catalog, visit requests) | Planned |
 
@@ -63,7 +63,7 @@ PALHOME
 │
 ├── AGENT SIDE
 │   ├── Login (email and password, accounts created by hand)
-│   ├── Dashboard: Home, Add, Contact, Inbox, Notifications
+│   ├── Dashboard: Home, Add, profile, Inbox, Notifications
 │   │   ├── Home: search, filters, Featured row
 │   │   ├── Add: form, map pin, photos, preview, create
 │   │   └── Listing detail: photos, price, details, amenities, map
@@ -255,7 +255,7 @@ src/
 ├── app/
 │   ├── (agent)/
 │   │   ├── auth/                  login (sign-up is a placeholder)
-│   │   └── dashboard/             Home, add, view/[listingId], contact, inbox, notifications
+│   │   └── dashboard/             Home, add, view/[listingId], profile, inbox, notifications
 │   ├── api/
 │   │   ├── listings/[listingId]/images/   photo upload
 │   │   ├── reverse-geocode/               address lookup
@@ -335,7 +335,7 @@ The script runs type generation, the type check and lint locally and stops on an
 - [ ] Turn off anonymous sign-ins in Supabase if nothing needs them.
 - [ ] Confirm RLS is enabled on every table and that no service-role key is used.
 - [ ] Check that the Storage bucket is public for reads and admin-only for writes.
-- [ ] Move the geocoder contact address out of the source code and into an environment variable.
+- [ ] Move the geocoder profile address out of the source code and into an environment variable.
 - [ ] Check the free-tier terms of the host and of Supabase (commercial use, project pausing).
 
 ## 13. Known Issues and Technical Debt
@@ -344,11 +344,11 @@ Some code is temporary and will be refactored after the first deployment.
 
 - Property types are listed in more than one place and should come from a single list.
 - Some unused schema files from an earlier design remain and should be deleted.
-- `/api/reverse-geocode` is public and calls Nominatim, which allows about one request per second and asks for a real contact. It should require a session and be rate limited.
+- `/api/reverse-geocode` is public and calls Nominatim, which allows about one request per second and asks for a real profile. It should require a session and be rate limited.
 - The Home cards do not show cover photos yet.
 - `search_listings`, `get_listing` and `GET /listings` must be kept in step with the normalized schema (the address now lives in `locations`).
 - Dashboard pages are not yet guarded on the server. Writes are protected, reads of public data are not.
-- The Contact, Inbox and Notifications pages are placeholders.
+- The profile, Inbox and Notifications pages are placeholders.
 - Only one unit per listing is supported. Several units for the project category are planned.
 
 ## 14. Roadmap
@@ -359,7 +359,7 @@ Some code is temporary and will be refactored after the first deployment.
 4. **AI-assisted creation:** paste a description, let the LLM fill the form, fall back to manual entry when the quota is used up.
 5. **Admin-only assistant**, tool permissions, and write tools with a confirmation step.
 6. **Home sections:** Recommended, Brokerage and Rental, plus category tabs. This needs a listing type (sale or rent), a category, and featured and recommended flags.
-7. **Public site:** catalog and listing pages, "Contact" and "Schedule a visit", with a notification to the agent.
+7. **Public site:** catalog and listing pages, "profile" and "Schedule a visit", with a notification to the agent.
 8. **Facebook Page posting:** AI-written captions generated in batches, approved by the agent, then scheduled through the Graph API.
 9. Optional rule-based chatbot for the public site.
 10. Automated tests for validation, the registry and the service layer.

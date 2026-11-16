@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   turbopack: {
     rules: {
       "*.css": {
@@ -10,15 +9,16 @@ const nextConfig: NextConfig = {
       },
     },
   },
+
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "apodbnxtewhbepatpysd.supabase.co",
-        pathname: "/storage/v1/object/public/**",
-      }
-    ]
-  }
+        pathname: "/storage/v1/object/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
